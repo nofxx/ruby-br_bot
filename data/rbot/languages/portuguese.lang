@@ -1,0 +1,68 @@
+okay:
+  certo
+  tudo bem então :)
+  okies!
+  tá bom
+  pronto
+  pode ser feito!
+  certamente
+  pode deixar que eu cuido disso pra você
+dunno:
+  não sei
+  não faço idéia
+  como?
+  quem sabe?
+  oops...
+  não me pergunte
+dunno_about_X:
+  não sei nada sobre %s
+  Eu nunca ouvi falar de %s :(
+  %s? o que é isso?
+  mas o quê é %s:
+insult:
+  %s: trouxa!
+  %s: :(
+  %s: Eu te odeio :(
+  %s: morra!
+  %s: Eu me ofendi!
+  %s: Você me magoa profundamente.
+hello:
+  olá :)
+  alou :)
+  saúde
+  hey!
+  fala garoto.
+  oi
+  yo
+  'sup?
+hello_X:
+  oi %s :)
+  %s: e ai
+  %s: fala :)
+  %s: saúde
+  hey %s :)
+  %s: oi!
+  yo %s!
+  %s: 'sup?
+  'sup %s?
+welcome:
+  sem problemas
+  seja bem vindo
+  de nada
+  tudo bem
+  np :)
+thanks:
+  obrigado!
+  muito obrigado querido!
+  ta bom :)
+  =D
+  Valeu fera!
+thanks_X:
+  %s: obrigado :)
+  %s: valeu
+  %s: =D
+  %s: ta bom :)
+  %s: Valeu!
+quit:
+  ok, tchau
+  falou
