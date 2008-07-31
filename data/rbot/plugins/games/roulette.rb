@@ -126,13 +126,20 @@ class RoulettePlugin < Plugin
 
   def spin(m, params={})
     # Spinning is just like resetting, except that nobody wins
+    # 
+    # new version => spinnin is just spinnin
     if m.private?
       m.reply "you gotta play roulette in channel dude"
       return
     end
 
     m.act "spins the cylinder"
-    reset_chambers
+    spin_it
+  end
+  
+  def spin_it
+    @chambers.each { |b| b = false }
+    @chambers[rand(@chambers.length)] = true
   end
 
   def reset_chambers
