@@ -24,7 +24,7 @@ class TrucoGame
   #Values already in the weight order
   SPECIALS = %w{Zap SeteCopas Espadilha SeteOuro}
   VALUES  = %w{3 2 A K J Q 7 6 5 4}
-
+  ORDER = SPECIALS.concat(VALUES)
 
   # cards in stock
   attr_reader :stock
@@ -49,22 +49,24 @@ class TrucoGame
   
   def TrucoGame.color_map(clr)
     case clr
-    when 'Ouro'
-      :red
-    when 'Copas'
-      :royal_blue
-    when 'Espada'
-      :limegreen
-    when 'Paus'
-      :yellow
+      when 'Ouro' then :red
+      when 'Copas' then :white
+      when 'Espada' then :black
+      when 'Paus' then :white
     end
   end
 
-  def TrucoGame.irc_color_bg(clr)
-    Irc.color([:white,:black][NAIPES.index(clr)%2],TrucoGame.color_map(clr))
+  def TrucoGame.irc_naipe_bg(clr)
+    cor = case clr
+    when 'Ouro' then :white
+    when 'Copas' then :red
+    when 'Espada' then :white
+    when 'Paus' then :black
+    end
+    Irc.color(cor, TrucoGame.color_map(clr))
   end
 
-  def TrucoGame.irc_color_fg(clr)
+  def TrucoGame.irc_naipe_fg(clr)
     Irc.color(TrucoGame.color_map(clr))
   end
 
@@ -72,11 +74,21 @@ class TrucoGame
     ret = Bold.dup
     str.length.times do |i|
       ret << (fg ?
-              TrucoGame.irc_color_fg(NAIPES[i%4]) :
-              TrucoGame.irc_color_bg(NAIPES[i%4]) ) +str[i,1]
+              TrucoGame.irc_naipe_fg(NAIPES[i%4]) :
+              TrucoGame.irc_naipe_bg(NAIPES[i%4]) ) +str[i,1]
     end
     ret << NormalText
   end
+  
+  def TrucoGame.simbolizar(na)
+    case na
+      when 'Copas' then "♥ "
+      when 'Ouro' then "♦ "
+      when 'Paus' then "♣ "
+      when 'Espada' then "♠ "
+    end
+  end
+  
 
   TRUCO = TrucoGame.colorify('TRUCO!', true)
   
@@ -91,15 +103,13 @@ class TrucoGame
     make_base_stock
     @stock = []
     make_stock
+    @round = 1
+    @round_value = 1
     @start_time = nil
     @join_timer = nil
-    @picker = 0
-    @last_picker = 0
     @must_play = nil
     @manager = manager
   end
-  
-  
   
   
   # ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## 
@@ -107,14 +117,33 @@ class TrucoGame
   #   Card
   #
   class Card
-    attr_accessor :naipe
-    attr_accessor :value
+    attr_reader :naipe
+    attr_reader :value
+    attr_reader :shortform
+    attr_reader :to_s
+    attr_reader :score
     
-    def initialize(value, naipe)
-      raise unless VALUES.include? value
-      @value = value.dup
+    def initialize(naipe, value)
       raise unless NAIPES.include? naipe
       @naipe = naipe.dup
+      raise unless VALUES.include? value
+      @value = value.dup
+     # @symbol = SYMBOLS[naipe.to_s]
+      # if NUMERICS.include? value
+      #   @value = value
+      #   @score = value
+      # else
+      #   @value = value.dup
+      #   @score = 20
+      # end
+      #if @value == '+2'
+      #  @shortform = (@color[0,1]+@value).downcase
+      #else
+        @shortform = (@naipe[0,1]+@value.to_s[0,1]).downcase
+      #end
+
+      @to_s = TrucoGame.irc_naipe_bg(@naipe) +
+         Bold + ["|", @value, TrucoGame.simbolizar(@naipe), @naipe, '|'].join(' ') + NormalText
     end
     
     def <=>(other)
@@ -180,14 +209,6 @@ class TrucoGame
   end
 
   def make_base_stock
-    
-    @base_stock = []
-    NAIPES.each do |n| 
-      VALUES.each do |v| 
-        @base_stock << [v,n]
-      end
-    end
-
     # #
     # SPECIAL CARDS    
     zap       = %w{4 Paus}
@@ -196,31 +217,24 @@ class TrucoGame
     seteouro  = %w{7 Ouro}
     
     especiais = [zap, setecopas, espadilha, seteouro]
-    @base_stock.delete(zap)
-    @base_stock.delete(espadilha)
-    @base_stock.delete(setecopas)
-    @base_stock.delete(seteouro)
-    @base_stock = especiais.concat(@base_stock)
-    # #
+    # @base_stock.delete(zap)
+    # @base_stock.delete(espadilha)
+    # @base_stock.delete(setecopas)
+    # @base_stock.delete(seteouro)
+    # @base_stock = especiais.concat(@base_stock)
+    # # #
     # ORDER
 
 #    list.concat(CARDS)
  #   list
     
-    list = []
-    p @base_stock
-    @base_stock.each do |c|
-      list << Card.new(c[0],c[1])
+    @base_stock = NAIPES.inject([]) do |list, naip|
+      VALUES.each do |v|
+        list << Card.new(naip, v)
+        #list << Card.new(naip, v) unless v == 0
+      end
+      list
     end
-    list
-       
-    # COLORS.inject([]) do |list, clr|
-    #   VALUES.each do |n|
-    #     list << Card.new(clr, n)
-    #     list << Card.new(clr, n) unless n == 0
-    #   end
-    #   list
-    # end
 
   end
 
@@ -235,23 +249,26 @@ class TrucoGame
     @stock.shuffle!
   end
 
-  def start_game
-    debug "Starting game"
+  def start_game(num_players)
+    debug "TRUCO----------------START---------------> game"
     @players.shuffle!
     show_order
-    announce _("%{p} deals the first card from the stock") % {
-      :p => @players.first
+    announce _("%{p} começa o jogo!! partida N %{n}") % {
+      :p => @players.first,
+      :n => @round
     }
-    card = @stock.shift
-    @picker = 0
-    @special = false
-    set_discard(card)
-    show_discard
-    if @special
+    #card = @stock.shift
+    #@picker = 0
+    ##@special = false
+    #set_discard(card)
+    #show_discard
+    #if @special
   #    do_special
-    end
-    next_turn
+    #end
+    #next_turn
+    show_turn
     @start_time = Time.now
+    
   end
 
   def elapsed_time
@@ -265,58 +282,59 @@ class TrucoGame
   def set_discard(card)
      @discard = card
      @value = card.value.dup rescue card.value
-     if Wild === card
-       @color = nil
-     else
-       @color = card.color.dup
-     end
-     if card.picker > 0
-       @picker += card.picker
-       @last_picker = @discard.picker
-     end
-     if card.special?
-       @special = true
-     else
-       @special = false
-     end
+     # if Wild === card
+     #   @naipe = nil
+     # else
+     #   @naipe = card.color.dup
+     # end
+     # if card.picker > 0
+     #   @picker += card.picker
+     #   @last_picker = @discard.picker
+     # end
+     # if card.special?
+     #   @special = true
+     # else
+     #   @special = false
+     # end
      @must_play = nil
    end
 
    def next_turn(opts={})
      @players << @players.shift
-     @player_has_picked = false
+  #   @player_has_picked = false
      show_turn
    end
 
    def can_play(card)
      # if play is forced, check against the only allowed cards
-     return false if @must_play and not @must_play.include?(card)
+    # return false if @must_play and not @must_play.include?(card)
 
      # When a +something is online, you can only play a +something of same or
      # higher something, or a Reverse of the correct color, or a Reverse on
      # a Reverse
      # TODO make optional
-     if @picker > 0
-       return true if card.picker >= @last_picker
-       return true if card.value == 'Reverse' and (card.color == @color or @discard.value == card.value)
-       return false
-     else
+     # if @picker > 0
+     #   return true if card.picker >= @last_picker
+     #   return true if card.value == 'Reverse' and (card.color == @color or @discard.value == card.value)
+     #   return false
+     # else
        # You can always play a Wild
-       return true if Wild === card
+       #return true if Wild === card
        # On a Wild, you must match the color
-       if Wild === @discard
-         return card.color == @color
-       else
-         # Otherwise, you can match either the value or the color
-         return (card.value == @value) || (card.color == @color)
-       end
-     end
+       # if Wild === @discard
+       #   return card.color == @color
+       # else
+     #     # Otherwise, you can match either the value or the color
+     #     return (card.value == @value) || (card.color == @color)
+     #   end
+     # end
+     true
    end
 
    def play_card(source, cards)
      debug "Playing card #{cards}"
      p = get_player(source)
-     shorts = cards.gsub(/\s+/,'').match(/^(?:([rbgy]\+?\d){1,2}|([rbgy][rs])|(w(?:\+4)?)([rbgy])?)$/).to_a
+     shorts = cards.gsub(/\s+/,'').match(/^(?:([ceop]\+?\d){1,2}|([ceop][rs])|(w(?:\+4)?)([ceop])?)$/).to_a
      debug shorts.inspect
      if shorts.empty?
        announce _("what cards were that again?")
@@ -338,10 +356,10 @@ class TrucoGame
      # wg -> wg, nil, w, g
      if cards = p.has_card?(short)
        debug cards
-       unless can_play(cards.first)
-         announce _("you can't play that card")
-         return
-       end
+       #unless can_play(cards.first)
+      #   announce _("you can't play that card")
+      #   return
+       #end
        if cards.length >= toplay
          # if the played card is a W+4 not played during a stacking +x
          # TODO if A plays an illegal W+4, B plays a W+4, should the next
@@ -353,16 +371,16 @@ class TrucoGame
          # only be possible if the first W+4 was illegal, so it wouldn't
          # apply for a W+4 played on a +2 anyway.
          #
-         if @picker == 0 and Wild === cards.first and cards.first.value 
-           # save the previous discard in case of challenge
-           @last_discard = @discard.dup
-           # save the color too, in case it was a Wild
-           @last_color = @color.dup
-         else
-           # mark the move as not challengeable
-           @last_discard = nil
-           @last_color = nil
-         end
+         # if @picker == 0 and Wild === cards.first and cards.first.value 
+         #   # save the previous discard in case of challenge
+         #   @last_discard = @discard.dup
+         #   # save the color too, in case it was a Wild
+         #   @last_color = @color.dup
+         # else
+         #   # mark the move as not challengeable
+         #   @last_discard = nil
+         #   @last_color = nil
+         # end
          set_discard(p.cards.delete_one(cards.shift))
          if toplay > 1
            set_discard(p.cards.delete_one(cards.shift))
@@ -371,27 +389,31 @@ class TrucoGame
              :card => @discard
            }
          else
-           announce _("%{p} plays %{card}") % { :p => p, :card => @discard }
+           announce _("%{p} jogou %{card}") % { :p => p, :card => @discard }
+           
          end
-         if p.cards.length == 1
-           announce _("%{p} has %{truco}!") % {
-             :p => p, :truco => TRUCO
-           }
-         elsif p.cards.length == 0
-           end_game
+         # if p.cards.length == 1
+         #   announce _("%{p} has %{truco}!") % {
+         #     :p => p, :truco => TRUCO
+         #   }
+         if p.cards.length == 0
+          # end_game
            return
          end
-         show_picker
-         if @color
-           if @special
-             do_special
-           end
-           next_turn
-         elsif jcolor
-           choose_color(p.user, jcolor)
-         else
-           announce _("%{p}, choose a color with: co r|b|g|y") % { :p => p }
-         end
+         # show_picker
+         #         if @color
+         #           if @special
+         #             do_special
+         #           end
+         #           next_turn
+         #         elsif jcolor
+         #           choose_color(p.user, jcolor)
+         #         else
+         #           announce _("%{p}, choose a color with: co r|b|g|y") % { :p => p }
+         #         end
+         # 
+         
+         next_turn
        else
          announce _("you don't have two cards of that kind")
        end
@@ -402,21 +424,27 @@ class TrucoGame
    
    def pass(user)
      p = get_player(user)
-     if @picker > 0
-       announce _("%{p} passes turn, and has to pick %{b}%{n}%{b} cards!") % {
-         :p => p, :b => Bold, :n => @picker
-       }
-       deal(p, @picker)
-       @picker = 0
-     else
-       if @player_has_picked
-         announce _("%{p} passes turn") % { :p => p }
-       else
-         announce _("you need to pick a card first")
-         return
-       end
-     end
+     # if @picker > 0
+     #   announce _("%{p} passes turn, and has to pick %{b}%{n}%{b} cards!") % {
+     #     :p => p, :b => Bold, :n => @picker
+     #   }
+     #   deal(p, @picker)
+     #   @picker = 0
+     # else
+       # if @player_has_picked
+       #   announce _("%{p} passes turn") % { :p => p }
+       # else
+       #   announce _("you need to pick a card first")
+       #   return
+       # end
+     # end
      next_turn
+   end
+   
+   def truco!
+     announce _("TRUUUUUUUUUUUCO LADRÃO")
+     @round_value == 1 ? @round_value = 3 : @round_value *= 2
+
    end
    
    def show_time
@@ -431,7 +459,7 @@ class TrucoGame
    end
 
    def show_order
-     announce _("%{truco} playing turn: %{players}") % {
+     announce _("%{truco} jogando: %{players}") % {
        :truco => TRUCO, :players => players.join(' ')
      }
    end
@@ -440,7 +468,7 @@ class TrucoGame
      cards = true
      cards = opts[:cards] if opts.key?(:cards)
      player = @players.first
-     announce _("it's %{player}'s turn") % { :player => player }
+     announce _("é a vez de %{player}") % { :player => player }
      show_user_cards(player) if cards
    end
 
@@ -450,7 +478,7 @@ class TrucoGame
    
    def show_discard
      announce _("Current discard: %{card} %{c}") % { :card => @discard,
-       :c => (SPECIALS === @discard) ? TrucoGame.irc_color_bg(@color) + " #{@color} " : nil
+       :c => (SPECIALS === @discard) ? TrucoGame.irc_naipe_bg(@naipe) + " #{@naipe} " : nil
      }
      show_picker
    end
@@ -471,6 +499,26 @@ class TrucoGame
        show_user_cards(u)
      end
    end
+   
+   def deal(player, num=1)
+     picked = []
+     num.times do
+       picked << @stock.delete_one
+       # if @stock.length == 0
+       #        announce _("Shuffling discarded cards")
+       #        make_stock
+       #        if @stock.length == 0
+       #          announce _("No more cards!")
+       #          end_game # FIXME nope!
+       #        end
+       #      end
+     end
+     picked.sort!
+     notify player, _("Você recebeu %{picked}") % { :picked => picked.join(' ') }
+     player.cards += picked
+     player.cards.sort!
+   end
+   
    def add_player(user)
      if p = get_player(user)
        announce _("you're already in the game, %{p}") % {
@@ -486,7 +534,15 @@ class TrucoGame
          return
        end
      end
-     cards = 7
+     
+     if @players.length > 4
+       announce _("maximo de 4 jogaores, %{p}") % {
+         :p => user
+       }
+       return
+     end
+     
+     cards = 3
      if @start_time
        cards = (@players.inject(0) do |s, pl|
          s +=pl.cards.length
@@ -494,17 +550,22 @@ class TrucoGame
      end
      p = Player.new(user)
      @players << p
-     announce _("%{p} joins this game of %{truco}") % {
+     announce _("%{p} entrou no jogo %{truco}") % {
        :p => p, :truco => TRUCO
      }
+     
      deal(p, cards)
      return if @start_time
      if @join_timer
-       @bot.timer.reschedule(@join_timer, 10)
+       @bot.timer.reschedule(@join_timer, 4) # 10s
      elsif @players.length > 1
-       announce _("game will start in 20 seconds")
-       @join_timer = @bot.timer.add_once(20) {
-         start_game
+       announce _("game will start in 5 seconds") # 20s
+       @join_timer = @bot.timer.add_once(5) {
+         if @players.length == 2
+           start_game(:two)
+         elsif @players.length == 4
+           start_game(:four)
+         end
        }
      end
    end
@@ -584,14 +645,14 @@ class TrucoGame
          :truco => TRUCO, :p => @players.first
        }
      end
-     if @picker > 0 and not halted
-       p = @players[1]
-       announce _("%{p} has to pick %{b}%{n}%{b} cards!") % {
-         :p => p, :n => @picker, :b => Bold
-       }
-       deal(p, @picker)
-       @picker = 0
-     end
+     # if @picker > 0 and not halted
+     #   p = @players[1]
+     #   announce _("%{p} has to pick %{b}%{n}%{b} cards!") % {
+     #     :p => p, :n => @picker, :b => Bold
+     #   }
+     #   deal(p, @picker)
+     #   @picker = 0
+     # end
      score = @players.inject(0) do |sum, p|
        if p.cards.length > 0
          announce _("%{p} still had %{cards}") % {
@@ -615,11 +676,9 @@ class TrucoGame
 
      @plugin.do_end_game(@channel, closure)
    end
-   
-  
-  
-  
-end
+
+ end
+
 
 # ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## 
 # 
@@ -643,7 +702,7 @@ class TrucoPlugin < Plugin
     case topic
     when 'commands'
       [
-      _("'jo' para entrar"),
+      _("'tru' para entrar"),
       _("'pl <carta>' pra jogar <carta>: ex.: 'pl 7o' pra jogar 7 de Ouro, ou 'pl zap' pra jogar o Zap!"),
       _("'pa' pra descartar no monte"),
       _("'ca' pra mostrar suas cartas"),
@@ -694,9 +753,13 @@ class TrucoPlugin < Plugin
     return unless m.plugin # skip messages such as: <someuser> botname,
     g = @games[m.channel]
     case m.plugin.intern
-    when :jo # join game
+    when :tru # join game
       return if m.params
       g.add_player(m.source)
+    when :truco!
+      g.truco!
+    when :seis!
+      g.truco!
     when :pa # pass turn
       return if m.params or not g.start_time
       if g.has_turn?(m.source)
@@ -734,7 +797,7 @@ class TrucoPlugin < Plugin
 
   def create_game(m, p)
     if @games.key?(m.channel)
-      m.reply _("Já existe um %{truco} rodando aqui, quem começou foi %{who}. diga 'jo' pra entrar") % {
+      m.reply _("Já existe um %{truco} rodando aqui, quem começou foi %{who}. diga 'tru' pra entrar") % {
         :who => @games[m.channel].manager,
         :truco => TrucoGame::TRUCO
       }
@@ -742,7 +805,7 @@ class TrucoPlugin < Plugin
     end
     @games[m.channel] = TrucoGame.new(self, m.channel, m.source)
     @bot.auth.irc_to_botuser(m.source).set_temp_permission('truco::manage', true, m.channel)
-    m.reply _("Ok, criado jogo de %{truco} no canal %{channel}, diga 'jo' pra entrar") % {
+    m.reply _("Ok, criado jogo de ♥ ♦ %{truco} ♠ ♣ no canal %{channel}, diga 'tru' pra entrar") % {
       :truco => TrucoGame::TRUCO,
       :channel => m.channel
     }
