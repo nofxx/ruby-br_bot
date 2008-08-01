@@ -2,10 +2,15 @@
 # :title: Truco Game Plugin for rbot
 #
 # Author:: Marcos Piccinini <nofxx>
-#
 # Copyright:: (C) 2008 Marcos Piccinini
-#
 # License:: GPL v2
+#
+# Adaptation of:
+# Uno Game Plugin for rbot
+# Author:: Giuseppe "Oblomov" Bilotta <giuseppe.bilotta@gmail.com>
+# Copyright:: (C) 2008 Giuseppe Bilotta
+# License:: GPL v2
+#
 #
 # Truco: You start with 3 cards. The values are as shown in the table. 
 # The one who wins two hands, wins a point.
@@ -14,7 +19,7 @@
 # 
 # You can play with 2 or 4 ppl.
 #
-
+#
 # ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## 
 # 
 #   TrucoGame
@@ -105,6 +110,9 @@ class TrucoGame
     make_stock
     @round = 1
     @round_value = 1
+    @called_truco = nil
+    @top_card = nil
+    @score = []
     @start_time = nil
     @join_timer = nil
     @must_play = nil
@@ -164,9 +172,12 @@ class TrucoGame
   class Player
     attr_accessor :cards
     attr_accessor :user
+    attr_accessor :score
+    
     def initialize(user)
       @user = user
       @cards = []
+      @score = 0
     end
     def has_card?(short)
       has = []
@@ -181,6 +192,15 @@ class TrucoGame
     end
     def to_s
       Bold + @user.to_s + Bold
+    end
+    def score(score = 1)
+      @score += score
+    end
+  end
+  
+  class Team
+    def initialize(players)
+      @players = players
     end
   end
 
@@ -304,6 +324,11 @@ class TrucoGame
   #   @player_has_picked = false
      show_turn
    end
+   
+   def next_round()
+     @round_value = 1
+     show_turn
+   end
 
    def can_play(card)
      # if play is forced, check against the only allowed cards
@@ -334,6 +359,7 @@ class TrucoGame
    def play_card(source, cards)
      debug "Playing card #{cards}"
      p = get_player(source)
+     #shorts = cards.gsub(/\s+/,'').match(/^(?:([ceop]\+?\d){1,2}|([ceop][rs])|(w(?:\+4)?)([ceop])?)$/).to_a
      shorts = cards.gsub(/\s+/,'').match(/^(?:([ceop]\+?\d){1,2}|([ceop][rs])|(w(?:\+4)?)([ceop])?)$/).to_a
      debug shorts.inspect
      if shorts.empty?
@@ -397,7 +423,7 @@ class TrucoGame
          #     :p => p, :truco => TRUCO
          #   }
          if p.cards.length == 0
-          # end_game
+           next_round
            return
          end
          # show_picker
@@ -412,7 +438,7 @@ class TrucoGame
          #           announce _("%{p}, choose a color with: co r|b|g|y") % { :p => p }
          #         end
          # 
-         
+         p.score(@round_value)
          next_turn
        else
          announce _("you don't have two cards of that kind")
@@ -442,9 +468,15 @@ class TrucoGame
    end
    
    def truco!
-     announce _("TRUUUUUUUUUUUCO LADRÃO")
-     @round_value == 1 ? @round_value = 3 : @round_value *= 2
-
+     p = @players.first
+     if @called_truco == p
+       announce _("%{p}, você acabou de pedir truco, ô animal!" % { :p => p })
+     else
+       announce _("%{p} Pediu: TRUUUUUUUUUUUCO LADRÃO!!!"% { :p => p })
+       @called_truco = p
+       @round_value == 1 ? @round_value = 3 : @round_value *= 2
+       announce _("Essa mão agora vale %{v}" % { :v => @round_value} )
+     end
    end
    
    def show_time
@@ -729,7 +761,7 @@ class TrucoPlugin < Plugin
       [
       _("Existem 56 cards em um baralho de %{truco}."),
       _("É retirado do baralho as cartas 8, 9, 10, a ordem de valores fica: 3 2 A K J Q 7 6 5 4."),
-      _("Existem também as quatro cartas especiais, Zap (4 Paus), Sete Copas, Espadilha (A Espada), Sete Ouro"),
+      _("Existem também as quatro cartas especiais, Zap (4 ♣), Sete Copas ( 7 ♥), Espadilha (A ♠), Sete Ouro ( 7 ♦)"),
       _("Elas matam qualquer carta normal, na ordem que estão colocadas acima.")
       ].join(" ") % { :truco => TrucoGame::TRUCO }
     when 'admin'
@@ -757,9 +789,19 @@ class TrucoPlugin < Plugin
       return if m.params
       g.add_player(m.source)
     when :truco!
-      g.truco!
+      return if m.params or not g.start_time
+      if g.has_turn?(m.source)
+        g.truco!
+      else
+        m.reply _("Acha bonito atrapalhar o jogo? Nao eh tua vez!")
+      end
     when :seis!
-      g.truco!
+      return if m.params or not g.start_time
+      if g.has_turn?(m.source)
+        g.truco!
+      else
+        m.reply _("Acha bonito atrapalhar o jogo? Nao eh tua vez!")
+      end
     when :pa # pass turn
       return if m.params or not g.start_time
       if g.has_turn?(m.source)
