@@ -59,10 +59,10 @@ class TrucoGame
 
   def TrucoGame.irc_naipe_bg(clr)
     cor = case clr
-    when 'Ouro' then :white
-    when 'Copas' then :red
-    when 'Espada' then :white
-    when 'Paus' then :black
+      when 'Ouro' then :white
+      when 'Copas' then :red
+      when 'Espada' then :white
+      when 'Paus' then :black
     end
     Irc.color(cor, TrucoGame.color_map(clr))
   end
@@ -107,6 +107,7 @@ class TrucoGame
     @hands = []
     @hand_value = 1    
     @rounds = []
+    @turns = 0
     @called_truco = nil
     @top_card = nil
     @top_card_owner = nil
@@ -130,9 +131,11 @@ class TrucoGame
     attr_reader :score
     
     def initialize(naipe, value)
-      raise unless NAIPES.include? naipe
+
+#        raise unless NAIPES.include? naipe || SPECIAL.include? naipe
+
+      raise unless ORDER.include? value
       @naipe = naipe.dup
-      raise unless VALUES.include? value
       @value = value.dup
       @shortform = (@naipe[0,1]+@value.to_s[0,1]).downcase
       
@@ -141,7 +144,7 @@ class TrucoGame
     end
     
     def <=>(other)
-      return ORDER.index(self.value) <=> ORDER.index(other.value)
+      return  ORDER.index(other.value) <=> ORDER.index(self.value)
     end
     include Comparable
   end
@@ -161,9 +164,9 @@ class TrucoGame
       @score = 0
     end
     def has_card?(short)
-      has = []
+      has = nil
       @cards.each { |c|
-        has << c if c.shortform == short
+        has = c if c.shortform == short
       }
       if has.empty?
         return false
@@ -216,18 +219,28 @@ class TrucoGame
   end
 
   def make_base_stock
-    # #
-    # SPECIAL CARDS    
-    zap       = %w{4 Paus}
-    setecopas = %w{7 Copas}
-    espadilha = %w{A Espada}
-    seteouro  = %w{7 Ouro}
     
-    especiais = [zap, setecopas, espadilha, seteouro]
-    # @base_stock.delete(zap)
-    # @base_stock.delete(espadilha)
-    # @base_stock.delete(setecopas)
-    # @base_stock.delete(seteouro)
+    base = NAIPES.inject([]) do |list, naip|
+      VALUES.each { |v| list << [naip, v] }
+      list
+    end
+    # #
+    # SPECIAL CARDS  
+    #TODO:refactor  
+    zap       = %w{Paus 4}
+    setecopas = %w{Copas 7}
+    espadilha = %w{Espada A}
+    seteouro  = %w{Ouro 7}
+    
+    #especiais = [zap, setecopas, espadilha, seteouro]
+
+    base.delete(zap)
+    base.delete(espadilha)
+    base.delete(setecopas)
+    base.delete(seteouro)
+    
+    especiais = [['Zap','Zap'], ['SeteCopas','SeteCopas'], ['Espadilha','Espadilha'], ['SeteOuro','SeteOuro']]
+    final = especiais.concat(base)
     # @base_stock = especiais.concat(@base_stock)
     # # #
     # ORDER
@@ -235,13 +248,18 @@ class TrucoGame
 #    list.concat(CARDS)
  #   list
     
-    @base_stock = NAIPES.inject([]) do |list, naip|
-      VALUES.each do |v|
-        list << Card.new(naip, v)
-        #list << Card.new(naip, v) unless v == 0
-      end
-      list
+    @base_stock = []
+    final.each do |f|
+      @base_stock << Card.new(f[0],f[1])
+
     end
+    # @base_stock = NAIPES.inject([]) do |list, naip|
+    #   VALUES.each do |v|
+    #     list << Card.new(naip, v)
+    #     #list << Card.new(naip, v) unless v == 0
+    #   end
+    #   list
+    # end
 
   end
 
@@ -256,9 +274,16 @@ class TrucoGame
     @stock.shuffle!
   end
 
-  def start_game(num_players)
+  def start_game#(num_players)
     debug "TRUCO----------------START---------------> game"
     @players.shuffle!
+    if @players.length == 3
+      announce _("%{p} you are out!!") % {
+        :p => @players.last
+      }
+      drop_player(@players.last)
+      
+    end
     show_order
     announce _("%{p} começa o jogo!! mão %{n}") % {
       :p => @players.first,
@@ -292,148 +317,161 @@ class TrucoGame
      @must_play = nil
    end
    
-   def next_round
-     @top_card_owner.score(@hand_value)
-     @top_card = nil
-     @top_card_owner = nil    
-     @hands = []
+   def clean_table
      @hand_value = 1
+     @turns = 0
+     @top_card = nil
+     @top_card_owner = nil
    end
    
-   def next_hand()
-     @hands << @top_card_owner
-     @players += @players.shift(@players.index(@top_card_owner))
-     @hand_value = 1
-     show_turn
-   end
+   def next_turn(kind = nil,opts={})
+     
+     case kind
+       when nil
+         @players << @players.shift
 
-   def next_turn(opts={})
-     @players << @players.shift
+       when :hand
+         announce _("%{p} ganhou essa mão com %{card}.") % { 
+           :p => @top_card_owner, 
+           :card => @top_card
+            }
+         @hands << @top_card_owner#, @top_card]
+         @players += @players.shift(@players.index(@top_card_owner))
+         clean_table
+       
+       when :round
+         announce _("%{p} ganhou essa rodada e tem agora %{s} pontos.") % { 
+           :p => @top_card_owner, 
+           :s => @top_card_owner.score
+            }
+         if @top_card_owner.score > 15
+           announce _("%{p} ganhou essa partida!!!!.") % { 
+              :p => @top_card_owner, 
+              :s => @top_card_owner.score
+            }
+           end_game
+         end
+         @players.each { |p| deal(p, 3) }
+         @top_card_owner.score(@hand_value)
+         @rounds << @hands
+         @hands = []
+         @players << @players.shift
+         clean_table
+     end
+     
      show_turn
    end
 
    def can_play(card)
      true
    end
+   
+   def get_card(source, card)
+     p = get_player(source)
+     return nil unless p
+     unless card =~ /1|2|3/
+        shorts = card.gsub(/\s+/,'').match(/^(?:([ceop]\+?\S){1,2}|([zap])|([copas])?)$/).to_a
+        debug shorts.inspect
+        if shorts.empty?
+           announce _("what cards were that again?")
+           return
+         end
+         full = shorts[0]
+         short = shorts[1] || shorts[2] || shorts[3]
+
+         debug [full, short].inspect #, jolly, jcolor, toplay].inspect
+      # r7r7 -> r7r7, r7, nil, nil
+      # r7 -> r7, r7, nil, nil
+      # w -> w, nil, w, nil
+      # wg -> wg, nil, w, g
+
+
+      card = p.has_card?(short) 
+    else
+      # new = > 1  |  2  |  3
+      card = p.cards[card.to_i - 1]
+    end
+    
+    if card 
+      return card 
+    else
+      return nil
+    end
+   end
 
    def play_card(source, cards)
      debug "Playing card #{cards}"
      p = get_player(source)
-     #shorts = cards.gsub(/\s+/,'').match(/^(?:([ceop]\+?\d){1,2}|([ceop][rs])|(w(?:\+4)?)([ceop])?)$/).to_a
-     shorts = cards.gsub(/\s+/,'').match(/^(?:([ceop]\+?\S){1,2}|([zap])|([copas])?)$/).to_a
-     debug shorts.inspect
-     if shorts.empty?
-       announce _("what cards were that again?")
-       return
-     end
-     full = shorts[0]
-     short = shorts[1] || shorts[2] || shorts[3]
-     jolly = shorts[3]
-     jcolor = shorts[4]
-     if jolly
-       toplay = 1
-     else
-       toplay = (full == short) ? 1 : 2
-     end
-     debug [full, short, jolly, jcolor, toplay].inspect
-     # r7r7 -> r7r7, r7, nil, nil
-     # r7 -> r7, r7, nil, nil
-     # w -> w, nil, w, nil
-     # wg -> wg, nil, w, g
-     if cards = p.has_card?(short)
+     puts cards.inspect
+     
        debug cards
-       #unless can_play(cards.first)
-      #   announce _("you can't play that card")
-      #   return
-       #end
-    #   if cards.length >= toplay
+         if cards = get_card(source, cards)    
+         set_discard(p.cards.delete_one(cards))
 
-         #   # save the previous discard in case of challenge
-         #   @last_discard = @discard.dup
+         if @top_card.nil?
 
-         # else
-         #   # mark the move as not challengeable
-         #   @last_discard = nil
-         #   @last_color = nil
-         # end
-         set_discard(p.cards.delete_one(cards.shift))
-
-           if @top_card.nil?
-             @top_card = @discard
-             announce _("%{p} começa a mão com %{card}") % { 
-               :p => p, 
-               :card => @discard
+           @top_card = @discard
+           @top_card_owner = p
+           announce _("%{p} começa a mão com %{card}") % { 
+             :p => p, 
+             :card => @discard
+              }
+              
+         elsif @discard > @top_card
+           @top_card = @discard
+           @top_card_owner = p
+           announce _("%{p} chegou matando com %{card}!") % { 
+             :p => p, 
+             :card => @discard
+             }
+                      
+          elsif @top_card == @discard
+            # TODO: call draw
+            announce _("%{p} jogou %{card}..e empata a mão, a maior ganha agora!") % { 
+                :p => p, 
+                :card => @discard
                 }
                 
-              next_turn
-              return
-
-           elsif @top_card >  @discard
-             @top_card = @discard
-             @top_card_owner = p
-             announce _("%{p} chegou matando com %{card}") % { 
-               :p => p, 
-               :card => @discard
-                }
-                
-                next_hand
-                return
-             
-           elsif @top_card == @discard
-             # TODO: call draw
-             announce _("%{p} jogou %{card}..e empata a mão, a maior ganha agora!") % { 
-               :p => p, 
-               :card => @discard
-                }
-            else
-              announce _("%{p} não deu conta com esse %{card}, a maior carta é %{t}") % { 
+          else
+            announce _("%{p} não deu conta com esse %{card}, a maior carta é %{t}") % { 
                 :p => p, 
                 :card => @discard,
                 :t => @top_card
-                }
-                   
+                }  
+                
            end
-         # end
-         # if p.cards.length == 1
-         #   announce _("%{p} has %{truco}!") % {
-         #     :p => p, :truco => TRUCO
-         #   }
-         if @hands.empty?#= 1# || @hands.include?(@top_card_owner)
-           @hands << @top_card_owner
-           return
-         elsif @hands.length == 1
-           if @hands[0] == @top_card_owner
-             announce _("%{p} ganhou essa mão com um %{card}") % { 
-               :p => @top_card_owner, 
-               :card => @top_card
-                }
-             next_round
+           
+           @turns += 1
+           
+           if @turns == @players.count  
+              if @hands.length == 2 || @hands[0] == @top_card_owner 
+                next_turn(:round)
+                else
+                  next_turn(:hand)
+                end
            else
+             # if @
              next_turn
            end
-         end
-     else
-       announce _("you don't have that card")
+      else
+            announce _("você não tem essa carta...")
      end
+end
+   
+   def pass(user, card)
+     
+     p = get_player(user)
+     if @called_truco
+       next_turn(:hand)
+       return
+     end
+     
+     next_turn
    end
    
-   def pass(user)
-     p = get_player(user)
-     # if @picker > 0
-     #   announce _("%{p} passes turn, and has to pick %{b}%{n}%{b} cards!") % {
-     #     :p => p, :b => Bold, :n => @picker
-     #   }
-     #   deal(p, @picker)
-     #   @picker = 0
-     # else
-       # if @player_has_picked
-       #   announce _("%{p} passes turn") % { :p => p }
-       # else
-       #   announce _("you need to pick a card first")
-       #   return
-       # end
-     # end
-     next_turn
+   def truco_accept
+     @hand_value == 1 ? @hand_value = 3 : @hand_value *= 2
+     announce _("Essa mão agora vale %{v}" % { :v => @hand_value} )
    end
    
    def truco!
@@ -443,8 +481,6 @@ class TrucoGame
      else
        announce _("%{p} Pediu: TRUUUUUUUUUUUCO LADRÃO!!!"% { :p => p })
        @called_truco = p
-       @hand_value == 1 ? @hand_value = 3 : @hand_value *= 2
-       announce _("Essa mão agora vale %{v}" % { :v => @hand_value} )
      end
    end
    
@@ -505,14 +541,6 @@ class TrucoGame
      picked = []
      num.times do
        picked << @stock.delete_one
-       # if @stock.length == 0
-       #        announce _("Shuffling discarded cards")
-       #        make_stock
-       #        if @stock.length == 0
-       #          announce _("No more cards!")
-       #          end_game # FIXME nope!
-       #        end
-       #      end
      end
      picked.sort!
      #notify player, _("Você recebeu %{picked}") % { :picked => picked.join(' ') }
@@ -545,9 +573,11 @@ class TrucoGame
      
      cards = 3
      if @start_time
-       cards = (@players.inject(0) do |s, pl|
-         s +=pl.cards.length
-       end*1.0/@players.length).ceil
+       announce _("Jogo já começou...espere o próximo #{user}")
+       return
+      # cards = (@players.inject(0) do |s, pl|
+      #   s +=pl.cards.length
+      # end*1.0/@players.length).ceil
      end
      p = Player.new(user)
      @players << p
@@ -562,11 +592,11 @@ class TrucoGame
      elsif @players.length > 1
        announce _("game will start in 5 seconds") # 20s
        @join_timer = @bot.timer.add_once(5) {
-         if @players.length == 2
-           start_game(:two)
-         elsif @players.length == 4
-           start_game(:four)
-         end
+        start_game
+        # case @players.length
+        #   when 2 then start_game(:two)
+        #   when 4 then start_game(:four)
+        # end
        }
      end
    end
@@ -767,7 +797,7 @@ class TrucoPlugin < Plugin
     when :pa # pass turn
       return if m.params or not g.start_time
       if g.has_turn?(m.source)
-        g.pass(m.source)
+        g.pass(m.source, m.params.downcase)
       else
         m.reply _("It's not your turn")
       end
