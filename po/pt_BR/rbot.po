@@ -1,3 +1,33 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR Free Software Foundation, Inc.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION"
+"PO-Revision-Date: 2008-08-06 09:47-0300"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>"
+"Language-Team: LANGUAGE <LL@li.org>"
+"MIME-Version: 1.0"
+"Content-Type: text/plain; charset=CHARSET"
+"Content-Transfer-Encoding: 8bit"
+
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR Free Software Foundation, Inc.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION"
+"PO-Revision-Date: 2008-08-06 09:14-0300"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>"
+"Language-Team: LANGUAGE <LL@li.org>"
+"MIME-Version: 1.0"
+"Content-Type: text/plain; charset=CHARSET"
+"Content-Transfer-Encoding: 8bit"
+
 # Portuguese translations for  rbot.
 # Copyright (C) 2008 Tom Gilbert
 # This file is distributed under the same license as the rbot package.
@@ -5,15 +35,15 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: rbot 0.9.12-git\n"
-"POT-Creation-Date: 2008-07-07 18:02+0200\n"
-"PO-Revision-Date: 2008-08-03 22:25-0300\n"
-"Last-Translator:  Glauber Prado,<smade4@gmail.com>\n"
-"Language-Team: Portuguese\n"
-"MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=UTF-8\n"
-"Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"Project-Id-Version: rbot 0.9.12-git"
+"POT-Creation-Date: 2008-07-07 18:02+0200"
+"PO-Revision-Date: 2008-08-03 22:25-0300"
+"Last-Translator:  Glauber Prado,<smade4@gmail.com>"
+"Language-Team: Portuguese"
+"MIME-Version: 1.0"
+"Content-Type: text/plain; charset=UTF-8"
+"Content-Transfer-Encoding: 8bit"
+"Plural-Forms: nplurals=2; plural=(n > 1);"
 
 #: lib/rbot/botuser.rb:40
 msgid "Password for the bot owner"
@@ -24,7 +54,7 @@ msgid ""
 "Set false to prevent new botusers from logging in without a password when "
 "the user netmask is known"
 msgstr ""
-"Ajuste como falso para prevenir novos usuários do bot logarem sem\n"
+"Ajuste como falso para prevenir novos usuários do bot logarem sem"
 "uma senha quando a mascára de rede é conhecida"
 
 #: lib/rbot/botuser.rb:46
@@ -32,7 +62,7 @@ msgid ""
 "Set false to prevent new botusers from recognizing IRC users without a need "
 "to manually login"
 msgstr ""
-"Ajuste como falso para prevenir novos usuários do robô como usuários IRC sem\n"
+"Ajuste como falso para prevenir novos usuários do robô como usuários IRC sem"
 "a necessidade de logar manualmente."
 
 #: lib/rbot/botuser.rb:49
@@ -60,7 +90,7 @@ msgid ""
 "The rest of rbot's configuration can be manipulated via IRC once rbot is "
 "connected and you are auth'd."
 msgstr ""
-"O resto da configuração do rbot pode ser manipulado pelo IRC quando o rbot\n"
+"O resto da configuração do rbot pode ser manipulado pelo IRC quando o rbot"
 "estiver conectado e você estiver autenticado"
 
 #: lib/rbot/core/auth.rb:69
@@ -145,7 +175,7 @@ msgid ""
 "sorry, %{cmd} doesn't look like a valid command. maybe you misspelled it, or "
 "you need to specify it should be in private?"
 msgstr ""
-"desculpe, %{cmd} não se parece com um comando válido. Talvez você fez um erro\n"
+"desculpe, %{cmd} não se parece com um comando válido. Talvez você fez um erro"
 "de sintaxe, ou você precisa específicar que ele deve ser em private?"
 
 #: lib/rbot/core/auth.rb:295
@@ -184,10 +214,10 @@ msgid ""
 "netmask is among the known ones. if <botuser> is omitted too autologin will "
 "be attempted"
 msgstr ""
-"login [<botuser>] [<senha>]: loga no bot como botuser <botuser> com senha\n"
-"<senha>. Quando usar a forma inteira, você deve contatar o bot em private.\n"
-"<senha> pode ser omitida se <botuser> permite login-by-mask e sua mascara de\n"
-"rede está entre os nomes conhecidos. Se <botuser> for omitido também autologin\n"
+"login [<botuser>] [<senha>]: loga no bot como botuser <botuser> com senha"
+"<senha>. Quando usar a forma inteira, você deve contatar o bot em private."
+"<senha> pode ser omitida se <botuser> permite login-by-mask e sua mascara de"
+"rede está entre os nomes conhecidos. Se <botuser> for omitido também autologin"
 "vai ser tentado."
 
 #: lib/rbot/core/auth.rb:357
@@ -204,8 +234,8 @@ msgid ""
 "it, prefix it with +; when you want to disable it, prefix it with -; when "
 "using the +reset+ command, do not use any prefix"
 msgstr ""
-"uma permissão é específicada como module::path::to::cmd; quando você quer\n"
-"ativar, prefixe-a com +; quando quiser desativar, prefixe-a com -; quando\n"
+"uma permissão é específicada como module::path::to::cmd; quando você quer"
+"ativar, prefixe-a com +; quando quiser desativar, prefixe-a com -; quando"
 "usar o comando +reset+, não use nenhum prefixo"
 
 #: lib/rbot/core/auth.rb:365
@@ -214,8 +244,8 @@ msgid ""
 "the permissions for botuser <user> in channel <channel> (use ? to change the "
 "permissions for private addressing)"
 msgstr ""
-"permissões [re]set <permission> [em <canal>] para <usuário>: ajusta ou reajusta\n"
-"as permissões para botuser <usuário> no canal <canal> (use ? para mudar as\n"
+"permissões [re]set <permission> [em <canal>] para <usuário>: ajusta ou reajusta"
+"as permissões para botuser <usuário> no canal <canal> (use ? para mudar as"
 "permissões para endereçagem em private"
 
 #: lib/rbot/core/auth.rb:367
@@ -227,7 +257,7 @@ msgid ""
 "permissions search <pattern>: display the permissions associated with the "
 "commands matching <pattern>"
 msgstr ""
-"permissions search <padrão>: mostra as permissões associadas com os comandos\n"
+"permissions search <padrão>: mostra as permissões associadas com os comandos"
 "que casam com <padrão>"
 
 #: lib/rbot/core/auth.rb:371
@@ -239,7 +269,7 @@ msgid ""
 "user show <what> : shows info about the user; <what> can be any of "
 "autologin, login-by-mask, netmasks"
 msgstr ""
-"user show <oque> : mostra informações sobre usuário; <oque> pode ser\n"
+"user show <oque> : mostra informações sobre usuário; <oque> pode ser"
 "qualquer dos autologin, login-by-mask, netmasks"
 
 #: lib/rbot/core/auth.rb:378
@@ -254,7 +284,7 @@ msgid ""
 "only contain upper and lowercase letters and numbers, and must be at least 4 "
 "characters long"
 msgstr ""
-"user set password <blah> : ajusta a senha do usuário para <blah>; senhas podem\n"
+"user set password <blah> : ajusta a senha do usuário para <blah>; senhas podem"
 "conter apenas letras e números e precisam ser de no mínimo 4 caracteres"
 
 #: lib/rbot/core/auth.rb:382
@@ -262,7 +292,7 @@ msgid ""
 "user add|rm netmask <mask> : adds/removes netmask <mask> from the list of "
 "netmasks known to the botuser you're linked to"
 msgstr ""
-"user add|rm netmask <mask> : adiciona/remove netmask <mask> da lista de\n"
+"user add|rm netmask <mask> : adiciona/remove netmask <mask> da lista de"
 "netmasks conhecidas ao botuser que você está ligado"
 
 #: lib/rbot/core/auth.rb:384
@@ -272,9 +302,9 @@ msgid ""
 "be reset to the default value) or +password+ (a new one will be generated "
 "and you'll be told in private)"
 msgstr ""
-"user reset <oque> : reajusta <oque> para os valores padrão. <oque> pode ser\n"
-"+netmask+ (a lista vai ser limpa), +autologin+ ou +login-by-mask+ (vai pro\n"
-"valor padrão) ou +password+ (um novo vai ser gerado e você vai ser notificado\n"
+"user reset <oque> : reajusta <oque> para os valores padrão. <oque> pode ser"
+"+netmask+ (a lista vai ser limpa), +autologin+ ou +login-by-mask+ (vai pro"
+"valor padrão) ou +password+ (um novo vai ser gerado e você vai ser notificado"
 "em private"
 
 #: lib/rbot/core/auth.rb:386
@@ -282,7 +312,7 @@ msgid ""
 "user tell <who> the password for <botuser> : contacts <who> in private to "
 "tell him/her the password for <botuser>"
 msgstr ""
-"user tell <quem> the password for <botuser> : contacta <quem> em private para lhe dizer\n"
+"user tell <quem> the password for <botuser> : contacta <quem> em private para lhe dizer"
 "a senha para <botuser>"
 
 #: lib/rbot/core/auth.rb:388
@@ -292,8 +322,8 @@ msgid ""
 "generated. The <name> should only contain alphanumeric characters and the "
 "underscore (_)"
 msgstr ""
-"user create <nome> <senha> : cria botuser com <nome> e <senha>. A senha pode ser omitida,\n"
-"no caso uma randômica vai ser gerada. O <nome> pode conter apenas caracteres alfanuméricos\n"
+"user create <nome> <senha> : cria botuser com <nome> e <senha>. A senha pode ser omitida,"
+"no caso uma randômica vai ser gerada. O <nome> pode conter apenas caracteres alfanuméricos"
 "e o underscore (_)"
 
 #: lib/rbot/core/auth.rb:390
@@ -308,9 +338,9 @@ msgid ""
 "destroy <botuser>', the botuser will be destroyed. If you want to cancel the "
 "destruction, issue the command 'user cancel destroy <botuser>'"
 msgstr ""
-"user destroy <botuser> : destrói <botuser>. Esta função %{highlight}precisa%{highlight}\n"
-"ser chamada em dois passos. Na primeira chamada <botuser> é programado pra destruição.\n"
-"Na segunda, que tem de ser na forma 'user confirm destroy <botuser>', o botuser vai ser\n"
+"user destroy <botuser> : destrói <botuser>. Esta função %{highlight}precisa%{highlight}"
+"ser chamada em dois passos. Na primeira chamada <botuser> é programado pra destruição."
+"Na segunda, que tem de ser na forma 'user confirm destroy <botuser>', o botuser vai ser"
 "destruido. Se você quer cancelar a destruição, execute o comando 'user cancel destroy <botuser>'"
 
 #: lib/rbot/core/auth.rb:394
@@ -325,8 +355,8 @@ msgid ""
 "whoami, permissions syntax, permissions [re]set, permissions view, user, "
 "meet, hello, allow, prevent"
 msgstr ""
-"auth <senhamaster>: loga como o dono do bot; outros comandos: login,\n"
-"whoami, permissions syntax, permissions [re]set, permissions view,\n"
+"auth <senhamaster>: loga como o dono do bot; outros comandos: login,"
+"whoami, permissions syntax, permissions [re]set, permissions view,"
 "user, meet, hello, allow, prevent"
 
 #: lib/rbot/core/auth.rb:399
@@ -334,7 +364,7 @@ msgid ""
 "meet <nick> [as <user>]: creates a bot user for nick, calling it user "
 "(defaults to the nick itself)"
 msgstr ""
-"meet <nick> [as <user>]: cria um bot user para nick, chamando ele <user>\n"
+"meet <nick> [as <user>]: cria um bot user para nick, chamando ele <user>"
 "(por padrão é o próprio nick)"
 
 #: lib/rbot/core/auth.rb:401
@@ -347,8 +377,8 @@ msgid ""
 "permissions to execute a command such as the provided sample command (in "
 "private or in channel, according to the optional <where>)"
 msgstr ""
-"allow <user> to do <comando exemplo> [<aonde>]: dá ao botuser <user> a\n"
-"permissão para executar o comando <comando exemplo> (em private ou no canal,\n"
+"allow <user> to do <comando exemplo> [<aonde>]: dá ao botuser <user> a"
+"permissão para executar o comando <comando exemplo> (em private ou no canal,"
 "de acordo com o opcional <aonde>)"
 
 #: lib/rbot/core/auth.rb:405
@@ -357,8 +387,8 @@ msgid ""
 "<user> the permissions to execute a command such as the provided sample "
 "command (in private or in channel, according to the optional <where>)"
 msgstr ""
-"deny <user> from doing <comando exemplo> [<aonde]: remove do botuser\n"
-"<user> a permissão para executar um comando como o exemplo (em private\n"
+"deny <user> from doing <comando exemplo> [<aonde]: remove do botuser"
+"<user> a permissão para executar um comando como o exemplo (em private"
 "ou no canal, de acordo com o opcional <aonde>)"
 
 #: lib/rbot/core/auth.rb:407
@@ -440,7 +470,7 @@ msgstr "Eu não mudei nada"
 
 #: lib/rbot/core/auth.rb:546
 msgid "is that a joke? setting the password in public?"
-msgstr "é uma piada? ajustar a senha em público?\n"
+msgstr "é uma piada? ajustar a senha em público?"
 
 #: lib/rbot/core/auth.rb:578
 msgid "the password for %{user} is now %{password}"
@@ -465,8 +495,8 @@ msgid ""
 "{pass} and you can change it at any time by telling me 'user set password "
 "<password>' in private"
 msgstr ""
-"Você agora está registrado como %{buname}. Eu criei um password randômico\n"
-"pra você: %{pass} e você pode mudá-lo quando quiser me dizendo 'user set password\n"
+"Você agora está registrado como %{buname}. Eu criei um password randômico"
+"pra você: %{pass} e você pode mudá-lo quando quiser me dizendo 'user set password"
 "<password>' em private"
 
 #: lib/rbot/core/auth.rb:652
@@ -507,7 +537,7 @@ msgstr "criado botuser %{user}"
 
 #: lib/rbot/core/auth.rb:692
 msgid " (queued for destruction)"
-msgstr "(esperando por destruição)\n"
+msgstr "(esperando por destruição)"
 
 #: lib/rbot/core/auth.rb:695
 msgid "I have no botusers other than the default ones"
@@ -540,7 +570,7 @@ msgid ""
 "%{user} already queued for destruction, use %{highlight}user confirm destroy "
 "%{user}%{highlight} to destroy it"
 msgstr ""
-"%{user} já está na fila de destruição, use %{highlight} user confirm destroy\n"
+"%{user} já está na fila de destruição, use %{highlight} user confirm destroy"
 "%{user}%{highlight} para destrui-lo"
 
 #: lib/rbot/core/auth.rb:730
@@ -548,7 +578,7 @@ msgid ""
 "%{user} queued for destruction, use %{highlight}user confirm destroy %{user}%"
 "{highlight} to destroy it"
 msgstr ""
-"%{user} na fila para destruição,, use %{highlight} user confirm destroy\n"
+"%{user} na fila para destruição,, use %{highlight} user confirm destroy"
 "%{user}%{highlight} para destrui-lo"
 
 #: lib/rbot/core/auth.rb:734
@@ -652,7 +682,7 @@ msgid ""
 "say <channel>|<nick> <message> => say <message> to <channel> or in private "
 "message to <nick>"
 msgstr ""
-"say <channel>|<nick> <message> => dizer <message> para <channel> ou em private\n"
+"say <channel>|<nick> <message> => dizer <message> para <channel> ou em private"
 "para <nick>"
 
 #: lib/rbot/core/basics.rb:121
@@ -660,7 +690,7 @@ msgid ""
 "action <channel>|<nick> <message> => does a /me <message> to <channel> or in "
 "private message to <nick>"
 msgstr ""
-"action <channel>|<nick> <message> => faz um /me <message> para <channel> ou em\n"
+"action <channel>|<nick> <message> => faz um /me <message> para <channel> ou em"
 "private para <nick>"
 
 #: lib/rbot/core/basics.rb:123
@@ -669,7 +699,7 @@ msgid ""
 "channels, if \"in here\", stop speaking in this channel, or stop speaking in "
 "<channel>"
 msgstr ""
-"quiet [in here|<channel>] => sem argumentos, para de falar em todos os canais,\n"
+"quiet [in here|<channel>] => sem argumentos, para de falar em todos os canais,"
 "se \\\"in here\\\", para de falar neste canal, ou para de falar no <channel>"
 
 #: lib/rbot/core/basics.rb:125
@@ -678,7 +708,7 @@ msgid ""
 "channels, if \"in here\", resume speaking in this channel, or resume "
 "speaking in <channel>"
 msgstr ""
-"talk [in here|<channel>] => sem argumentos, volta a falar em todos os canais\n"
+"talk [in here|<channel>] => sem argumentos, volta a falar em todos os canais"
 ",se \\\"in here\\\", volta a falar neste canal, ou volta a falar em <channel>"
 
 #: lib/rbot/core/basics.rb:127
@@ -690,7 +720,7 @@ msgid ""
 "mode <channel> <mode> <nicks> => set channel modes for <nicks> on <channel> "
 "to <mode>"
 msgstr ""
-"mode <canal> <modo> <nicks> => ajusta os modos do canal dos <nicks> no <canal>\n"
+"mode <canal> <modo> <nicks> => ajusta os modos do canal dos <nicks> no <canal>"
 "para <modo>"
 
 #: lib/rbot/core/basics.rb:135
@@ -768,7 +798,7 @@ msgid ""
 "config list => list configuration modules, config list <module> => list "
 "configuration keys for module <module>"
 msgstr ""
-"config list => lista os módulos de configuração, config list <module> => lista\n"
+"config list => lista os módulos de configuração, config list <module> => lista"
 "as chaves de configuração para o módulo <module>"
 
 #: lib/rbot/core/config.rb:222
@@ -783,7 +813,7 @@ msgstr "reset key <key> para o padrão"
 msgid ""
 "config set <key> <value> => set configuration value for key <key> to <value>"
 msgstr ""
-"config set <key> <value> => ajusta o valor da configuração da chave <key>\n"
+"config set <key> <value> => ajusta o valor da configuração da chave <key>"
 "para <value>"
 
 #: lib/rbot/core/config.rb:228
@@ -795,7 +825,7 @@ msgid ""
 "config add <value> to <key> => add value <value> to key <key> if <key> is an "
 "array"
 msgstr ""
-"config add <value> to <key> => adicionar valor <value> da chave <key> se <key>\n"
+"config add <value> to <key> => adicionar valor <value> da chave <key> se <key>"
 "é uma array"
 
 #: lib/rbot/core/config.rb:232
@@ -803,7 +833,7 @@ msgid ""
 "config rm <value> from <key> => remove value <value> from key <key> if <key> "
 "is an array"
 msgstr ""
-"config rm <value> from <key> => remover valor <value> da chave <key> se <key>\n"
+"config rm <value> from <key> => remover valor <value> da chave <key> se <key>"
 "for uma array"
 
 #: lib/rbot/core/config.rb:234
@@ -811,7 +841,7 @@ msgid ""
 "config module - bot configuration. usage: list, desc, get, set, unset, add, "
 "rm"
 msgstr ""
-"config module - configuração do bot. usage: list, desc, get, set, unset, add,\n"
+"config module - configuração do bot. usage: list, desc, get, set, unset, add,"
 "rm"
 
 #: lib/rbot/core/config.rb:239
@@ -892,7 +922,7 @@ msgstr "meses"
 
 #: lib/rbot/core/utils/utils.rb:206
 msgid "day"
-msgstr "dia\n"
+msgstr "dia"
 
 #: lib/rbot/core/utils/utils.rb:206
 msgid "days"
@@ -1018,8 +1048,8 @@ msgstr[1] ""
 #: lib/rbot/plugins.rb:693
 msgid "%{highlight}%{count} plugin ignored%{highlight}"
 msgid_plural "%{highlight}%{count} plugins ignored%{highlight}"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "%{highlight}%{count} plugin ignorado%{highlight}"
+msgstr[1] "%{highlight}%{count} plugins ignorados%{highlight}"
 
 #: lib/rbot/plugins.rb:698
 msgid ""
@@ -1029,13 +1059,18 @@ msgid_plural ""
 "%{highlight}%{count} plugins ignored%{highlight}: use %{bold}%{command}%"
 "{bold} to see why"
 msgstr[0] ""
+"%{highlight}%{count} plugin ignorado%{highlight}: use %{bold}%{command}%"
+"{bold} pra ver porquê"
 msgstr[1] ""
+"%{highlight}%{count} plugins ignorados%{highlight}: use %{bold}%{command}%"
+"{bold} pra ver porquê"
+
 
 #: lib/rbot/plugins.rb:708
 msgid "%{highlight}%{count} plugin failed to load%{highlight}"
 msgid_plural "%{highlight}%{count} plugins failed to load%{highlight}"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "%{highlight}%{count} plugin falhou ao carregar%{highlight}"
+msgstr[1] "%{highlight}%{count} plugins falharam ao carregar%{highlight}"
 
 #: lib/rbot/plugins.rb:713
 msgid ""
@@ -1045,41 +1080,48 @@ msgid_plural ""
 "%{highlight}%{count} plugins failed to load%{highlight}: use %{bold}%"
 "{command}%{bold} to see why"
 msgstr[0] ""
+"%{highlight}%{count} plugin falhou ao carregar%{highlight}: use %{bold}%"
+"{command}%{bold} para ver o porquê"
 msgstr[1] ""
+"%{highlight}%{count} plugins falharam ao carregar%{highlight}: use %{bold}%"
+"{command}%{bold} para ver o porquê"
+
 
 #: lib/rbot/plugins.rb:743
 msgid "no plugins failed to load"
-msgstr ""
+msgstr "nenhum plugin falhou ao carregar"
 
 #: lib/rbot/plugins.rb:745
 msgid ""
 "%{highlight}%{plugin}%{highlight} in %{dir} failed with error %{exception}: %"
 "{reason}"
 msgstr ""
+"%{highlight}%{plugin}%{highlight} em %{dir} falhou com erro %{exception}: %"
+"{reason}"
 
 #: lib/rbot/plugins.rb:749
 msgid "at %{backtrace}"
-msgstr ""
+msgstr "em %{backtrace}"
 
 #: lib/rbot/plugins.rb:755
 msgid "no plugins were ignored"
-msgstr ""
+msgstr "nenhum plugin foi ignorado"
 
 #: lib/rbot/plugins.rb:759
 msgid "overruled by previous"
-msgstr ""
+msgstr "tomado conta pelo anterior"
 
 #: lib/rbot/registry.rb:20
 msgid ""
 "upgrading old-style (rbot 0.9.5 or earlier) plugin registry to new format"
-msgstr ""
+msgstr "upgrading velho estilo de registro do plugin(rbot 0.9.5 ou anterior) para novo formato"
 
 #: lib/rbot/registry.rb:40
 msgid ""
 "upgrading previous (rbot 0.9.9 or earlier) plugin registry to new split "
 "format"
-msgstr ""
+msgstr "upgrading antigo registro do plugin (rbot 0.9.9 ou anterior) para novo formato de corte"
 
 #: lib/rbot/registry.rb:190
 msgid "marshal recovery failed, trying default"
-msgstr ""
+msgstr "politica de recuperação falhou, tentando padrão"
