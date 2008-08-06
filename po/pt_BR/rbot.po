@@ -1,33 +1,3 @@
-# SOME DESCRIPTIVE TITLE.
-# Copyright (C) YEAR Free Software Foundation, Inc.
-# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
-#
-#, fuzzy
-msgid ""
-msgstr ""
-"Project-Id-Version: PACKAGE VERSION"
-"PO-Revision-Date: 2008-08-06 09:47-0300"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>"
-"Language-Team: LANGUAGE <LL@li.org>"
-"MIME-Version: 1.0"
-"Content-Type: text/plain; charset=CHARSET"
-"Content-Transfer-Encoding: 8bit"
-
-# SOME DESCRIPTIVE TITLE.
-# Copyright (C) YEAR Free Software Foundation, Inc.
-# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
-#
-#, fuzzy
-msgid ""
-msgstr ""
-"Project-Id-Version: PACKAGE VERSION"
-"PO-Revision-Date: 2008-08-06 09:14-0300"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>"
-"Language-Team: LANGUAGE <LL@li.org>"
-"MIME-Version: 1.0"
-"Content-Type: text/plain; charset=CHARSET"
-"Content-Transfer-Encoding: 8bit"
-
 # Portuguese translations for  rbot.
 # Copyright (C) 2008 Tom Gilbert
 # This file is distributed under the same license as the rbot package.
