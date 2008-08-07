@@ -148,7 +148,7 @@ class TrucoGame
       raise unless ORDER.include? c[1]
       @naipe = c[0].dup
       @value = c[1].dup
-      @shortform = (@naipe[0,1]+@value.to_s[0,1]).downcase
+      @shortform = (@naipe[0,1] + @value.to_s[0,1]).downcase
 
       @to_s = TrucoGame.irc_naipe_bg(@naipe) +
         Bold + ["|", @value, TrucoGame.simbolizar(@naipe), @naipe, '|'].join(' ') + NormalText
@@ -169,11 +169,13 @@ class TrucoGame
     attr_accessor :cards
     attr_accessor :user
     attr_accessor :score
+    attr_accessor :mil
 
     def initialize(user)
       @user = user
       @cards = []
       @score = 0
+      @mil = 0
     end
     def has_card?(short)
       has = nil
@@ -188,9 +190,6 @@ class TrucoGame
     end
     def to_s
       Bold + @user.to_s + Bold
-    end
-    def score(score = 1)
-      @score += score
     end
   end
 
@@ -247,8 +246,8 @@ class TrucoGame
     end
 
     base[base.index(%w{Paus 4})]    = ['Paus','Zap']
-    base[base.index(%w{Espada A})]  = ['Espada','SeteCopas']
-    base[base.index(%w{Copas 7})]   = ['Copas','Espadilha']
+    base[base.index(%w{Copas 7})]  = ['Copas','SeteCopas']
+    base[base.index(%w{Espada A})]   = ['Espada','Espadilha']
     base[base.index(%w{Ouro 7})]    = ['Ouro','SeteOuro']
 
     @base_stock = base.inject([]) do |ll, f|
@@ -274,16 +273,17 @@ class TrucoGame
   #
   def start_game#(num_players)
 
-    if @players.length == 3 or @players.length == 5
+    if @players.length == 3 || @players.length == 5
       announce _("%{p} you are out!!") % { :p => @players.last }
       drop_player(@players.last)
     end
     @players.shuffle!
     @players.each { |p| show_user_cards(p) }
     show_order
-    announce _("%{p} começa o jogo!! mão %{n}") % {
+    announce _("%{p} começa o jogo!! mão %{n}, rodada vale %{v}") % {
       :p => @players.first,
-      :n => @hands.length + 1
+      :n => @hands.length + 1,
+      :v => @round_value
     }
     #card = @stock.shift
     #set_discard(card)
@@ -323,9 +323,10 @@ class TrucoGame
       @players << @players.shift
 
     when :hand
-      announce _("%{p} ganhou essa mão com %{card}.") % { 
+      announce _("%{p} ganhou essa mão com %{card}. mão valendo %{v}") % { 
         :p => @top_card_owner, 
-        :card => @top_card
+        :card => @top_card,
+        :v => @round_value
       }
       @hands << @top_card_owner#, @top_card]
       @players += @players.shift(@players.index(@top_card_owner))
@@ -333,24 +334,30 @@ class TrucoGame
 
     when :round
       
-      @top_card_owner.score(@round_value)
+      @top_card_owner.mil += @round_value      
       @round_value = @round_value_default
-      if @top_card_owner.score > @round_value_end
+      if @top_card_owner.mil > @round_value_end
         announce _("%{p} ganhou essa partida!!!!.") % { 
           :p => @top_card_owner, 
-          :s => @top_card_owner.score
+          :s => @top_card_owner.mil
         }
         end_game(true)
       end
-      
+      announce _("%{p} ganhou essa rodada valendo %{v} e tem agora %{s} pontos.") % { 
+        :p => @top_card_owner, 
+        :v => @round_value,
+        :s => @top_card_owner.mil
+      }      
+      @players.each { |p| p.cards = [] }
+      make_base_stock
+      @stock = []      
+      make_stock
       @players.each { |p| deal(p, 3) }
+      @players.each { |p| show_user_cards(p) }      
       @rounds << @hands
       @hands = []
       @players << @players.shift
-      announce _("%{p} ganhou essa rodada e tem agora %{s} pontos.") % { 
-        :p => @top_card_owner, 
-        :s => @top_card_owner.score
-      }
+
       clean_table
     end
 
@@ -375,7 +382,6 @@ class TrucoGame
       short = shorts[1] || shorts[2] || shorts[3]
       card = p.has_card?(short) 
     else
-      # new = > 1  |  2  |  3
       card = p.cards[card.to_i - 1]
     end
     card ? card : nil
@@ -415,12 +421,21 @@ class TrucoGame
           }
 
         elsif @top_card == @discard
-          # TODO: call draw
-            @hands << [@players.first, @players[1]]
-            announce _("%{p} jogou %{card}..e empata a mão") % { 
-              :p => p, 
-              :card => @discard
-            }
+          # TODO: call draw better?
+            if @hands.length == 2
+              @top_card_owner = @hands[0]
+              announce _("%{p} jogou %{card}..empata a mão e ganha a rodada!") % { 
+                :p => p, 
+                :card => @discard
+              }
+            else
+              
+              @hands << [@players.first, @players[1]]
+              announce _("%{p} jogou %{card}..e empata a mão") % { 
+                :p => p, 
+                :card => @discard
+              }
+            end
 
         else
           announce _("%{p} não deu conta com esse %{card}, a maior carta é %{t}") % { 
@@ -435,7 +450,7 @@ class TrucoGame
       @turns += 1
 
       if @turns == @players.count  
-        if @hands.length == 2 || @hands[0] == @top_card_owner 
+        if @hands.length >= 2 || @hands[0] == @top_card_owner 
           next_turn(:round)
         else
           next_turn(:hand)
@@ -454,37 +469,34 @@ class TrucoGame
   #  TRUCO
   # 
   def go_truco(source, ok)
-    if @called_truco
-      p = get_player(source)
+    p = get_player(source)
 
-      if @called_truco == p
-        announce _("Seu oponente deve fazer isso...")
+    if @called_truco == p
+      announce _("Seu oponente deve fazer isso...")
+    else
+      if ok
+        announce _("%{p} aceitou truco...") % { :p => p }    
+        @accept_truco = true
       else
-        if ok
-          announce _("%{p} aceitou truco...") % { :p => p }    
-          @accept_truco = true
-        else
-          announce _("%{p} fugiu da parada...") % { :p => p }
-          @accept_truco = false     
-          next_turn(:round)
-        end
+        announce _("%{p} fugiu da parada...") % { :p => p }
+        @accept_truco = false     
+        next_turn(:round)
       end
     end
   end
   
   def name_value(v)
     case v
-    when 2..8
-      "MEIIIIPAU!"
-    when 9..11
-      "NOOOOOOOOOVE!"
+    when 2..8   then "MEIIIIPAU!"
+    when 9..11  then "NOOOOOOOOOVE!"
+    when 12..15  then "DOOOOOOOOOOOOZE!"      
     else
       "PARTIDAAAAAAA!!!"
     end
   end
   
   def value_increase
-    @round_value == @round_value_default ? @round_value += 2 : @round_value += 3
+  #  @round_value == @round_value_default ? @round_value += 2 : @round_value += 3
     announce _("Essa rodada foi pra %{v}" % { :v => @round_value} )
   end
 
@@ -529,6 +541,14 @@ class TrucoGame
     announce _("%{truco} jogando: %{players}") % {
       :truco => TRUCO, :players => players.join(' ')
     }
+  end
+  
+  def show_round
+    announce _("esse é o %{r} partida") % { :r => @rounds.count + 1 }
+  end
+  
+  def show_hand 
+    announce _("essa é a %{m} mão") % { :m => @hands.count + 1 }
   end
 
   def show_turn(opts={})
@@ -699,11 +719,11 @@ class TrucoGame
     end
 
     score = @players.inject(0) do |sum, p|
-      sum += p.score #.inject(0) do |cs, c|
+      p.score #.inject(0) do |cs, c|
       #      cs += c.score
       #     end
       # end
-      sum
+     # sum
     end
 
     closure = { :dropouts => @dropouts, :players => @players, :runtime => runtime }
@@ -806,46 +826,30 @@ class TrucoPlugin < Plugin
     when :tru # join game
       return if m.params
       g.add_player(m.source)
-    when :truco!, :seis!, :doze!
+    when :truco!, :seis!, :nove!, :doze!, :dobro!, :triplo!
       return if m.params or not g.start_time
         if g.has_turn?(m.source) || g.is_next?(m.source)
         g.truco!(m.source)
       else
-        m.reply _("Acha bonito atrapalhar o jogo? Nao eh tua vez!")
+        m.reply _("It's not your turn")
       end
-    when :pc # play covered
-      return if m.params or not g.start_time
+    when :pl, :pc # play covered send true for cover
+      return unless m.params and g.start_time
       if g.has_turn?(m.source)
-        g.play_card(m.source, m.params.downcase, true)
+        g.play_card(m.source, m.params.downcase, m.plugin.intern == :pc ? true : false)
       else
         m.reply _("It's not your turn")
       end
-    when :pl # play card
-      if g.has_turn?(m.source)
-        g.play_card(m.source, m.params.downcase)
-      else
-        m.reply _("It's not your turn")
-      end
-    when :ok #  accept truco
+    when :ok, :no #  accept truco send true for ok
       if g.called_truco
         if g.has_turn?(m.source) || g.is_next?(m.source)
-          g.go_truco(m.source, true)
+          g.go_truco(m.source, m.plugin.intern == :ok ? true : false)
         else
           m.reply _("It's not your turn")
         end
       else
         m.reply _("Ninguem pediu truco...")
-      end  
-    when :no # deny truco
-      if g.called_truco
-        if g.has_turn?(m.source) || g.is_next?(m.source)
-          g.go_truco(m.source, false)
-        else
-          m.reply _("It's not your turn")
-        end
-      else
-        m.reply _("Ninguem pediu truco...")
-      end          
+      end           
     when :ca # show current cards
       return if m.params
       g.show_all_cards(m.source)
@@ -855,6 +859,12 @@ class TrucoPlugin < Plugin
     when :od # show playing order
       return if m.params
       g.show_order
+    when :ha # show which hand we are
+      return if m.prams
+      g.show_hand
+    when :ro
+      return if m.params
+      g.show_round
     when :ti # show play time
       return if m.params
       g.show_time
@@ -869,8 +879,6 @@ class TrucoPlugin < Plugin
   end
   
   # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-  #
-  #
   #
   #
   #  GAME MANAGEMENT
@@ -924,11 +932,7 @@ class TrucoPlugin < Plugin
     super
   end
   
-  
   # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-  #
-  #
-  #
   #
   #  CHANNEL
   #
@@ -995,8 +999,6 @@ class TrucoPlugin < Plugin
   end
   
   # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-  #
-  #
   #
   #
   #  STATS
