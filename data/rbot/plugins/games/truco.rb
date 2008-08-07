@@ -335,7 +335,6 @@ class TrucoGame
     when :round
       
       @top_card_owner.mil += @round_value      
-      @round_value = @round_value_default
       if @top_card_owner.mil > @round_value_end
         announce _("%{p} ganhou essa partida!!!!.") % { 
           :p => @top_card_owner, 
@@ -348,6 +347,7 @@ class TrucoGame
         :v => @round_value,
         :s => @top_card_owner.mil
       }      
+      @round_value = @round_value_default
       @players.each { |p| p.cards = [] }
       make_base_stock
       @stock = []      
@@ -496,7 +496,7 @@ class TrucoGame
   end
   
   def value_increase
-  #  @round_value == @round_value_default ? @round_value += 2 : @round_value += 3
+    @round_value == @round_value_default ? @round_value += 2 : @round_value += 3
     announce _("Essa rodada foi pra %{v}" % { :v => @round_value} )
   end
 
