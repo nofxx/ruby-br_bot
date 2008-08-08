@@ -14,10 +14,8 @@
 #
 # Truco: You start with 3 cards. The values are as shown in the table. 
 # The one who wins two hands, wins a point.
-#
 # If the first one drawns, the next one must decide (the most valuable card wins)
-# 
-# You can play with 2 or 4 ppl.
+# You can play with 2, 4 or 6 ppl.
 #
 #
 # # # # # # # # # # # # # # 
@@ -26,7 +24,6 @@
 #
 class TrucoGame
   NAIPES = %w{Ouro Copas Espada Paus}
-  #Values already in the weight order
   SPECIALS = %w{Zap SeteCopas Espadilha SeteOuro}
   VALUES  = %w{3 2 A K J Q 7 6 5 4}
   ORDER = SPECIALS.concat(VALUES)
@@ -50,19 +47,19 @@ class TrucoGame
 
   def TrucoGame.color_map(clr)
     case clr
-    when 'Ouro' then :red
-    when 'Copas' then :white
+    when 'Ouro'   then :red
+    when 'Copas'  then :white
     when 'Espada' then :black
-    when 'Paus' then :white
+    when 'Paus'   then :white
     end
   end
 
   def TrucoGame.irc_naipe_bg(clr)
     cor = case clr
-    when 'Ouro' then :white
-    when 'Copas' then :red
+    when 'Ouro'   then :white
+    when 'Copas'  then :red
     when 'Espada' then :white
-    when 'Paus' then :black
+    when 'Paus'   then :black
     end
     Irc.color(cor, TrucoGame.color_map(clr))
   end
@@ -81,15 +78,23 @@ class TrucoGame
     ret << NormalText
   end
 
-  def TrucoGame.simbolizar(na)
-    case na
-    when 'Copas' then "♥ "
-    when 'Ouro' then "♦ "
-    when 'Paus' then "♣ "
-    when 'Espada' then "♠ "
+  def TrucoGame.simbolizar(n)
+    case n
+    when 'Copas'  then  "♥"
+    when 'Ouro'   then  "♦"
+    when 'Paus'   then  "♣"
+    when 'Espada' then  "♠"
     end
   end
   
+  def announce(msg, opts={})
+    @bot.say channel, msg, opts
+  end
+
+  def notify(player, msg, opts={})
+    @bot.notice player.user, msg, opts
+  end
+
   # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
   #
   #
@@ -97,10 +102,9 @@ class TrucoGame
   #
   #  INIT
   #
-
   TRUCO = TrucoGame.colorify('TRUCO!', true)
 
-  def initialize(plugin, channel, manager)
+  def initialize(plugin, channel, manager, round_value, end_game)
     @channel = channel
     @plugin = plugin
     @bot = plugin.bot
@@ -112,7 +116,6 @@ class TrucoGame
     @stock = []
     make_stock
     @hands = []
-    @round_value = 1    
     @rounds = []
     @turns = 0
     @called_truco = nil
@@ -122,14 +125,13 @@ class TrucoGame
     @score = []
     @start_time = nil
     @join_timer = nil
-    @must_play = nil
     @manager = manager
+    @round_value = round_value ? round_value : 1 
+    @round_value_default = @round_value
+    @round_value_end = end_game ? end_game : 11
   end
 
-
   # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-  #
-  #
   #
   #
   #  CARD
@@ -141,18 +143,15 @@ class TrucoGame
     attr_reader :to_s
     attr_reader :score
 
-    def initialize(c)#naipe, value)
-      naipe = c[0]
-      value = c[1]
-      #        raise unless NAIPES.include? naipe || SPECIAL.include? naipe
-
-      raise unless ORDER.include? value
-      @naipe = naipe.dup
-      @value = value.dup
-      @shortform = (@naipe[0,1]+@value.to_s[0,1]).downcase
+    def initialize(c)
+      raise unless NAIPES.include? c[0]
+      raise unless ORDER.include? c[1]
+      @naipe = c[0].dup
+      @value = c[1].dup
+      @shortform = (@naipe[0,1] + @value.to_s[0,1]).downcase
 
       @to_s = TrucoGame.irc_naipe_bg(@naipe) +
-      Bold + ["|", @value, TrucoGame.simbolizar(@naipe), @naipe, '|'].join(' ') + NormalText
+        Bold + ["|", @value, TrucoGame.simbolizar(@naipe), @naipe, '|'].join(' ') + NormalText
     end
 
     def <=>(other)
@@ -164,19 +163,19 @@ class TrucoGame
   # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
   #
   #
-  #
-  #
   #  PLAYER
   #
   class Player
     attr_accessor :cards
     attr_accessor :user
     attr_accessor :score
+    attr_accessor :mil
 
     def initialize(user)
       @user = user
       @cards = []
       @score = 0
+      @mil = 0
     end
     def has_card?(short)
       has = nil
@@ -191,15 +190,6 @@ class TrucoGame
     end
     def to_s
       Bold + @user.to_s + Bold
-    end
-    def score(score = 1)
-      @score += score
-    end
-  end
-
-  class Team
-    def initialize(players)
-      @players = players
     end
   end
 
@@ -222,65 +212,47 @@ class TrucoGame
   def current_player
     get_player(@players[0])
   end
-
-  def announce(msg, opts={})
-    @bot.say channel, msg, opts
-  end
-
-  def notify(player, msg, opts={})
-    @bot.notice player.user, msg, opts
+  
+  # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+  #
+  #
+  #  TEAM
+  #
+  class Team
+    attr_accessor :name
+    attr_accessor :members
+    
+    def initialize(name, members)
+      @name = name
+      @members = members
+    end
+    
+    def to_s
+      "In this team: " + Bold + @members.join[', '] + Bold
+    end 
   end
 
 
   # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
   #
   #
-  #
-  #
   #  STOCK
   #
-  
   def make_base_stock
 
     base = NAIPES.inject([]) do |list, naip|
       VALUES.each { |v| list << [naip, v] }
       list
     end
-    # #
-    # SPECIAL CARDS  
-    #TODO:refactor  
-    zap       = %w{Paus 4}
-    setecopas = %w{Copas 7}
-    espadilha = %w{Espada A}
-    seteouro  = %w{Ouro 7}
 
-    #especiais = [zap, setecopas, espadilha, seteouro]
-
-    base[base.index(zap)]         = ['Paus','Zap']
-    base[base.index(espadilha)]   = ['Espada','SeteCopas']
-    base[base.index(setecopas)]   = ['Copas','Espadilha']
-    base[base.index(seteouro)]    = ['Ouro','SeteOuro']
-
-    #especiais = [ , ]
-    #final = especiais.concat(base)
-    # @base_stock = especiais.concat(@base_stock)
-    # # #
-    # ORDER
-
-    #    list.concat(CARDS)
-    #   list
+    base[base.index(%w{Paus 4})]    = ['Paus','Zap']
+    base[base.index(%w{Copas 7})]  = ['Copas','SeteCopas']
+    base[base.index(%w{Espada A})]   = ['Espada','Espadilha']
+    base[base.index(%w{Ouro 7})]    = ['Ouro','SeteOuro']
 
     @base_stock = base.inject([]) do |ll, f|
       ll << Card.new(f)
     end
-    # @base_stock = NAIPES.inject([]) do |list, naip|
-    #   VALUES.each do |v|
-    #     list << Card.new(naip, v)
-    #     #list << Card.new(naip, v) unless v == 0
-    #   end
-    #   list
-    # end
-
   end
 
   def make_stock
@@ -297,35 +269,25 @@ class TrucoGame
   # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
   #
   #
-  #
-  #
   #  START GAME
   #
-
   def start_game#(num_players)
-    debug "TRUCO----------------START---------------> game"
-    @players.shuffle!
-    if @players.length == 3
-      announce _("%{p} you are out!!") % {
-        :p => @players.last
-      }
-      drop_player(@players.last)
 
+    if @players.length == 3 || @players.length == 5
+      announce _("%{p} you are out!!") % { :p => @players.last }
+      drop_player(@players.last)
     end
+    @players.shuffle!
+    @players.each { |p| show_user_cards(p) }
     show_order
-    announce _("%{p} começa o jogo!! mão %{n}") % {
+    announce _("%{p} começa o jogo!! mão %{n}, rodada vale %{v}") % {
       :p => @players.first,
-      :n => @hands.length
+      :n => @hands.length + 1,
+      :v => @round_value
     }
     #card = @stock.shift
-    #@picker = 0
-    ##@special = false
     #set_discard(card)
     #show_discard
-    #if @special
-    #    do_special
-    #end
-    #next_turn
     show_turn
     @start_time = Time.now
 
@@ -342,58 +304,60 @@ class TrucoGame
   def set_discard(card)
     @discard = card
     @value = card.value.dup rescue card.value
-    @must_play = nil
   end
   
   # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
   #
   #
-  #
-  #
   #  TABLE
   #
-
   def clean_table
-
     @turns = 0
     @top_card = nil
     @top_card_owner = nil
   end
 
   def next_turn(kind = nil,opts={})
-
     case kind
     when nil
       @players << @players.shift
 
     when :hand
-      announce _("%{p} ganhou essa mão com %{card}.") % { 
+      announce _("%{p} ganhou essa mão com %{card}. mão valendo %{v}") % { 
         :p => @top_card_owner, 
-        :card => @top_card
+        :card => @top_card,
+        :v => @round_value
       }
       @hands << @top_card_owner#, @top_card]
       @players += @players.shift(@players.index(@top_card_owner))
       clean_table
 
     when :round
-
-      if @top_card_owner.score > 15
+      
+      @top_card_owner.mil += @round_value      
+      if @top_card_owner.mil > @round_value_end
         announce _("%{p} ganhou essa partida!!!!.") % { 
           :p => @top_card_owner, 
-          :s => @top_card_owner.score
+          :s => @top_card_owner.mil
         }
-        end_game
+        end_game(true)
       end
+      announce _("%{p} ganhou essa rodada valendo %{v} e tem agora %{s} pontos.") % { 
+        :p => @top_card_owner, 
+        :v => @round_value,
+        :s => @top_card_owner.mil
+      }      
+      @round_value = @round_value_default
+      @players.each { |p| p.cards = [] }
+      make_base_stock
+      @stock = []      
+      make_stock
       @players.each { |p| deal(p, 3) }
-      @top_card_owner.score(@round_value)
-      @round_value = 1
+      @players.each { |p| show_user_cards(p) }      
       @rounds << @hands
       @hands = []
       @players << @players.shift
-      announce _("%{p} ganhou essa rodada e tem agora %{s} pontos.") % { 
-        :p => @top_card_owner, 
-        :s => @top_card_owner.score
-      }
+
       clean_table
     end
 
@@ -403,52 +367,29 @@ class TrucoGame
   # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
   #
   #
-  #
-  #
   #  PLAY 
   #
-
-  def can_play(card)
-    true
-  end
-
   def get_card(source, card)
     p = get_player(source)
     return nil unless p
     unless card =~ /1|2|3/
       shorts = card.gsub(/\s+/,'').match(/^(?:([ceop]\+?\S){1,2}|([zap])|([copas])?)$/).to_a
-      debug shorts.inspect
       if shorts.empty?
         announce _("what cards were that again?")
         return
       end
       full = shorts[0]
       short = shorts[1] || shorts[2] || shorts[3]
-
-      debug [full, short].inspect #, jolly, jcolor, toplay].inspect
-      # r7r7 -> r7r7, r7, nil, nil
-      # r7 -> r7, r7, nil, nil
-      # w -> w, nil, w, nil
-      # wg -> wg, nil, w, g
-
-
       card = p.has_card?(short) 
     else
-      # new = > 1  |  2  |  3
       card = p.cards[card.to_i - 1]
     end
-
-    if card 
-      return card 
-    else
-      return nil
-    end
+    card ? card : nil
   end
 
   def play_card(source, cards=nil, cover=false)
     if @called_truco 
       unless @accept_truco
-
         announce _("Voce deve aceitar ou nao o truco! Valor da rodada: %{v}") % { 
           :v => @round_value
         }
@@ -456,54 +397,60 @@ class TrucoGame
       end
     end
     return unless cards
-
-    debug "Playing card #{cards}"
+    
     p = get_player(source)
-    puts cards.inspect
-    debug cards
     if cards = get_card(source, cards)    
       set_discard(p.cards.delete_one(cards))
 
       unless cover
+        if @top_card.nil?
 
+          @top_card = @discard
+          @top_card_owner = p
+          announce _("%{p} começa a mão com %{card}") % { 
+            :p => p, 
+            :card => @discard
+          }
 
-      if @top_card.nil?
+        elsif @discard > @top_card
+          @top_card = @discard
+          @top_card_owner = p
+          announce _("%{p} chegou matando com %{card}!") % { 
+            :p => p, 
+            :card => @discard
+          }
 
-        @top_card = @discard
-        @top_card_owner = p
-        announce _("%{p} começa a mão com %{card}") % { 
-          :p => p, 
-          :card => @discard
-        }
+        elsif @top_card == @discard
+          # TODO: call draw better?
+            if @hands.length == 2
+              @top_card_owner = @hands[0]
+              announce _("%{p} jogou %{card}..empata a mão e ganha a rodada!") % { 
+                :p => p, 
+                :card => @discard
+              }
+            else
+              
+              @hands << [@players.first, @players[1]]
+              announce _("%{p} jogou %{card}..e empata a mão") % { 
+                :p => p, 
+                :card => @discard
+              }
+            end
 
-      elsif @discard > @top_card
-        @top_card = @discard
-        @top_card_owner = p
-        announce _("%{p} chegou matando com %{card}!") % { 
-          :p => p, 
-          :card => @discard
-        }
+        else
+          announce _("%{p} não deu conta com esse %{card}, a maior carta é %{t}") % { 
+            :p => p, 
+            :card => @discard,
+            :t => @top_card
+          }  
 
-      elsif @top_card == @discard
-        # TODO: call draw
-        announce _("%{p} jogou %{card}..e empata a mão, a maior ganha agora!") % { 
-          :p => p, 
-          :card => @discard
-        }
-
-      else
-        announce _("%{p} não deu conta com esse %{card}, a maior carta é %{t}") % { 
-          :p => p, 
-          :card => @discard,
-          :t => @top_card
-        }  
-
+        end
       end
-    end
+      
       @turns += 1
 
       if @turns == @players.count  
-        if @hands.length == 2 || @hands[0] == @top_card_owner 
+        if @hands.length >= 2 || @hands[0] == @top_card_owner 
           next_turn(:round)
         else
           next_turn(:hand)
@@ -519,66 +466,66 @@ class TrucoGame
   # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
   #
   #
-  #
-  #
   #  TRUCO
   # 
+  def go_truco(source, ok)
+    p = get_player(source)
 
-  def pass(source, ok)
-    if @called_truco
-      p = get_player(source)
-
-      if @called_truco == p
-        announce _("Seu oponente deve fazer isso...")
+    if @called_truco == p
+      announce _("Seu oponente deve fazer isso...")
+    else
+      if ok
+        announce _("%{p} aceitou truco...") % { :p => p }    
+        @accept_truco = true
       else
-        if ok
-          announce _("%{p} aceitou truco...") % { :p => p }    
-          @accept_truco = true      
-         # value_increase
-        else
-          announce _("%{p} fugiu da parada...") % { :p => p }
-          @accept_truco = false     
-          next_turn(:round)
-        end
+        announce _("%{p} fugiu da parada...") % { :p => p }
+        @accept_truco = false     
+        next_turn(:round)
       end
     end
   end
   
+  def name_value(v)
+    case v
+    when 2..8   then "MEIIIIPAU!"
+    when 9..11  then "NOOOOOOOOOVE!"
+    when 12..15  then "DOOOOOOOOOOOOZE!"      
+    else
+      "PARTIDAAAAAAA!!!"
+    end
+  end
+  
   def value_increase
-    @round_value == 1 ? @round_value = 3 : @round_value *= 2
+    @round_value == @round_value_default ? @round_value += 2 : @round_value += 3
     announce _("Essa rodada foi pra %{v}" % { :v => @round_value} )
-   # @called_truco = nil
   end
 
   def truco!(source)
     p = get_player(source)
     if @called_truco
-
       if @called_truco == p
         announce _("%{p}, você acabou de pedir truco, ô animal!" % { :p => p })
         return
       end
-      announce _("%{p} Pediu: DOOOOOOOOBRO LADRÃO!!!"% { :p => p })
-      value_increase
-      @accept_truco = false     
-      @called_truco = p
+      announce _("%{p} Pediu: %{name} LADRÃO!!!"% { 
+        :p => p,
+        :name => name_value(@round_value)
+         })
+
     else
       announce _("%{p} Pediu: TRUUUUUUUUUUUCO LADRÃO!!!"% { :p => p })
-      value_increase
-      @accept_truco = false
-      @called_truco = p
-    end
 
+    end
+    value_increase
+    @accept_truco = false     
+    @called_truco = p
   end
   
   # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
   #
   #
-  #
-  #
   #  SHOW STUFF
   #
-
   def show_time
     if @start_time
       announce _("This %{truco} game has been going on for %{time}") % {
@@ -594,6 +541,14 @@ class TrucoGame
     announce _("%{truco} jogando: %{players}") % {
       :truco => TRUCO, :players => players.join(' ')
     }
+  end
+  
+  def show_round
+    announce _("esse é o %{r} partida") % { :r => @rounds.count + 1 }
+  end
+  
+  def show_hand 
+    announce _("essa é a %{m} mão") % { :m => @hands.count + 1 }
   end
 
   def show_turn(opts={})
@@ -645,11 +600,8 @@ class TrucoGame
   # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
   #
   #
-  #
-  #
   #  PLAYER MANAGEMENT
   #
-
   def add_player(user)
     if p = get_player(user)
       announce _("you're already in the game, %{p}") % {
@@ -666,15 +618,15 @@ class TrucoGame
       end
     end
 
-    if @players.length > 4
-      announce _("maximo de 4 jogaores, %{p}") % {
+    if @players.length > 6
+      announce _("maximo de 6 jogaores, %{p}") % {
         :p => user
       }
       return
     end
 
     if @start_time
-      announce _("Jogo já começou...espere o próximo #{user}")
+      announce _("Jogo já começou...espere o próximo, #{user}")
       return
     end
 
@@ -709,22 +661,9 @@ class TrucoGame
     announce _("%{p} gives up this game of %{truco}") % {
       :p => p, :truco => TRUCO
     }
-    #     case @players.length
-    #     when 2
-    if p == @players.first
-      next_turn
-    end
+
     end_game
-    #       return
-    #     when 1
-    #       end_game(true)
-    return
-    #    end
-    #     debug @stock.length
-    #    while p.cards.length > 0
-    #       @stock.insert(rand(@stock.length), p.cards.shift)
-    #     end
-    #     debug @stock.length
+#    return
     @dropouts << @players.delete_one(p)
   end
 
@@ -757,10 +696,8 @@ class TrucoGame
   #
   #
   #
-  #
   #  END GAME
   #
-
   def end_game(halted = false)
     runtime = @start_time ? Time.now -  @start_time : 0
     if halted
@@ -782,15 +719,11 @@ class TrucoGame
     end
 
     score = @players.inject(0) do |sum, p|
-      #if p.cards.length > 0
-      # announce _("%{p} still had %{cards}") % {
-      #   :p => p, :cards => p.cards.join(' ')
-      # }
-      sum += p.score #.inject(0) do |cs, c|
+      p.score #.inject(0) do |cs, c|
       #      cs += c.score
       #     end
       # end
-      sum
+     # sum
     end
 
     closure = { :dropouts => @dropouts, :players => @players, :runtime => runtime }
@@ -804,14 +737,9 @@ class TrucoGame
 
     @plugin.do_end_game(@channel, closure)
   end
-
 end
 
-
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-#
-#
-#
 #
 #  TRUCO
 #
@@ -830,70 +758,66 @@ class TrucoPlugin < Plugin
   
   # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
   #
-  #
-  #
-  #
   #  HELP
   #
-
   def help(plugin, topic="")
     case topic
     when 'commands'
       [
         _("'tru' para entrar"),
-        _("'pl <carta>' pra jogar <carta>: ex.: 'pl 7o' pra jogar 7 de Ouro, ou 'pl zap' pra jogar o Zap!"),
-        _("'pa' pra descartar no monte"),
+        _("'pl <carta>' pra jogar <carta>: ex.: 'pl 1' pra jogar a primeira carta, ou 'pl 3' pra jogar a última!"),
+        _("'pc <carta>' pra jogar coberto"),
+        _("'truco!' pra pedir truco"),        
+        _("'ok' pra aceitar um truco"),        
+        _("'no' pra fugir do truco"),        
         _("'ca' pra mostrar suas cartas"),
         _("'cd' pra mostrar o descarte atual"),
         _("'od' mostra a ordem de jogo"),
         _("'ti' mostra o tempo de jogo"),
         _("'tu' mostra de quem é a vez")
-        ].join("; ")
-      when 'rules'
-        _("play all your cards, one at a time, by matching either the color or the value of the currently discarded card. ") +
-        _("cards with special effects: Skip (next player skips a turn), Reverse (reverses the playing order), +2 (next player has to take 2 cards). ") +
-        _("Wilds can be played on any card, and you must specify the color for the next card. ") +
-        _("Wild +4 also forces the next player to take 4 cards, but it can only be played if you can't play a color card. ") +
-        _("you can play another +2 or +4 card on a +2 card, and a +4 on a +4, forcing the first player who can't play one to pick the cumulative sum of all cards. ") +
-        _("you can also play a Reverse on a +2 or +4, bouncing the effect back to the previous player (that now comes next). ")
-      when /scor(?:e|ing)/, /points?/
-        [
-        _("The points won with a game of %{truco} are totalled from the cards remaining in the hands of the other players."),
-        _("Each normal (not special) card is worth its face value (from 0 to 9 points)."),
-        _("Each colored special card (+2, Reverse, Skip) is worth 20 points."),
-        _("Each Wild and Wild +4 is worth 50 points.")
-        ].join(" ") % { :truco => TrucoGame::TRUCO }
-      when /cards?/
-        [
-        _("Existem 56 cards em um baralho de %{truco}."),
-        _("É retirado do baralho as cartas 8, 9, 10, a ordem de valores fica: 3 2 A K J Q 7 6 5 4."),
-        _("Existem também as quatro cartas especiais, Zap (4 ♣), Sete Copas ( 7 ♥), Espadilha (A ♠), Sete Ouro ( 7 ♦)"),
-        _("Elas matam qualquer carta normal, na ordem que estão colocadas acima.")
-        ].join(" ") % { :truco => TrucoGame::TRUCO }
-      when 'admin'
-        _("The game manager (the user that started the game) can execute the following commands to manage it: ") +
-        [
-        _("'truco drop <user>' to drop a user from the game (any user can drop itself using 'truco drop')"),
-        _("'truco replace <old> [with] <new>' to replace a player with someone else (useful in case of disconnects)"),
-        _("'truco transfer [to] <nick>' to transfer game ownership to someone else"),
-        _("'truco end' to end the game before its natural completion")
-        ].join("; ")
-      else
-        _("%{truco} game. !truco to start a game. see 'help truco rules' for the rules, 'help truco admin' for admin commands. In-game commands: %{cmds}.") % {
-          :truco => TrucoGame::TRUCO,
-          :cmds => help(plugin, 'commands')
-        }
-      end
+      ].join("; ")
+    when 'rules'
+      _("play all your cards, one at a time, by matching either the color or the value of the currently discarded card. ") +
+      _("cards with special effects: Skip (next player skips a turn), Reverse (reverses the playing order), +2 (next player has to take 2 cards). ") +
+      _("Wilds can be played on any card, and you must specify the color for the next card. ") +
+      _("Wild +4 also forces the next player to take 4 cards, but it can only be played if you can't play a color card. ") +
+      _("you can play another +2 or +4 card on a +2 card, and a +4 on a +4, forcing the first player who can't play one to pick the cumulative sum of all cards. ") +
+      _("you can also play a Reverse on a +2 or +4, bouncing the effect back to the previous player (that now comes next). ")
+    when /scor(?:e|ing)/, /points?/
+      [
+      _("The points won with a game of %{truco} are totalled from the cards remaining in the hands of the other players."),
+      _("Each normal (not special) card is worth its face value (from 0 to 9 points)."),
+      _("Each colored special card (+2, Reverse, Skip) is worth 20 points."),
+      _("Each Wild and Wild +4 is worth 50 points.")
+      ].join(" ") % { :truco => TrucoGame::TRUCO }
+    when /cards?/
+      [
+      _("Existem 56 cards em um baralho de %{truco}."),
+      _("É retirado do baralho as cartas 8, 9, 10, a ordem de valores fica: 3 2 A K J Q 7 6 5 4."),
+      _("Existem também as quatro cartas especiais, Zap (4 ♣), Sete Copas ( 7 ♥), Espadilha (A ♠), Sete Ouro ( 7 ♦)"),
+      _("Elas matam qualquer carta normal, na ordem que estão colocadas acima.")
+      ].join(" ") % { :truco => TrucoGame::TRUCO }
+    when 'admin'
+      _("The game manager (the user that started the game) can execute the following commands to manage it: ") +
+      [
+      _("'truco drop <user>' to drop a user from the game (any user can drop itself using 'truco drop')"),
+      _("'truco replace <old> [with] <new>' to replace a player with someone else (useful in case of disconnects)"),
+      _("'truco transfer [to] <nick>' to transfer game ownership to someone else"),
+      _("'truco end' to end the game before its natural completion")
+      ].join("; ")
+    else
+      _("%{truco} game. !truco to start a game. see 'help truco rules' for the rules, 'help truco admin' for admin commands. In-game commands: %{cmds}.") % {
+        :truco => TrucoGame::TRUCO,
+        :cmds => help(plugin, 'commands')
+      }
     end
+  end
     
-    # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-    #
-    #
-    #
-    #
-    #  COMMANDS
-    #
-
+  # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+  #
+  #
+  #  COMMANDS
+  #
   def message(m)
     return unless @games.key?(m.channel)
     return unless m.plugin # skip messages such as: <someuser> botname,
@@ -902,46 +826,30 @@ class TrucoPlugin < Plugin
     when :tru # join game
       return if m.params
       g.add_player(m.source)
-    when :truco!, :seis!, :doze!
+    when :truco!, :seis!, :nove!, :doze!, :dobro!, :triplo!
       return if m.params or not g.start_time
         if g.has_turn?(m.source) || g.is_next?(m.source)
         g.truco!(m.source)
       else
-        m.reply _("Acha bonito atrapalhar o jogo? Nao eh tua vez!")
+        m.reply _("It's not your turn")
       end
-    when :pc # play covered
-      return if m.params or not g.start_time
+    when :pl, :pc # play covered send true for cover
+      return unless m.params and g.start_time
       if g.has_turn?(m.source)
-        g.play_card(m.source, m.params.downcase, true)
+        g.play_card(m.source, m.params.downcase, m.plugin.intern == :pc ? true : false)
       else
         m.reply _("It's not your turn")
       end
-    when :pl # play card
-      if g.has_turn?(m.source)
-        g.play_card(m.source, m.params.downcase)
-      else
-        m.reply _("It's not your turn")
-      end
-    when :ok #  accept truco
+    when :ok, :no #  accept truco send true for ok
       if g.called_truco
         if g.has_turn?(m.source) || g.is_next?(m.source)
-          g.pass(m.source, true)
+          g.go_truco(m.source, m.plugin.intern == :ok ? true : false)
         else
           m.reply _("It's not your turn")
         end
       else
         m.reply _("Ninguem pediu truco...")
-      end  
-    when :no # deny truco
-      if g.called_truco
-        if g.has_turn?(m.source) || g.is_next?(m.source)
-          g.pass(m.source, false)
-        else
-          m.reply _("It's not your turn")
-        end
-      else
-        m.reply _("Ninguem pediu truco...")
-      end          
+      end           
     when :ca # show current cards
       return if m.params
       g.show_all_cards(m.source)
@@ -951,6 +859,12 @@ class TrucoPlugin < Plugin
     when :od # show playing order
       return if m.params
       g.show_order
+    when :ha # show which hand we are
+      return if m.prams
+      g.show_hand
+    when :ro
+      return if m.params
+      g.show_round
     when :ti # show play time
       return if m.params
       g.show_time
@@ -967,11 +881,8 @@ class TrucoPlugin < Plugin
   # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
   #
   #
-  #
-  #
   #  GAME MANAGEMENT
   #
-
   def create_game(m, p)
     if @games.key?(m.channel)
       m.reply _("Já existe um %{truco} rodando aqui, quem começou foi %{who}. diga 'tru' pra entrar") % {
@@ -980,7 +891,7 @@ class TrucoPlugin < Plugin
       }
       return
     end
-    @games[m.channel] = TrucoGame.new(self, m.channel, m.source)
+    @games[m.channel] = TrucoGame.new(self, m.channel, m.source, p[:value], p[:end])
     @bot.auth.irc_to_botuser(m.source).set_temp_permission('truco::manage', true, m.channel)
     m.reply _("Ok, criado jogo de ♥ ♦ %{truco} ♠ ♣ no canal %{channel}, diga 'tru' pra entrar") % {
       :truco => TrucoGame::TRUCO,
@@ -1021,15 +932,10 @@ class TrucoPlugin < Plugin
     super
   end
   
-  
   # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-  #
-  #
-  #
   #
   #  CHANNEL
   #
-
   def chan_reg(channel)
     @registry.sub_registry(channel.downcase)
   end
@@ -1095,11 +1001,8 @@ class TrucoPlugin < Plugin
   # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
   #
   #
-  #
-  #
   #  STATS
   #
-
   def do_chanstats(m, p)
     stats = chan_stats(m.channel)
     np = stats['played']
@@ -1127,150 +1030,139 @@ class TrucoPlugin < Plugin
         :tavg => Utils.secs_to_string(tgt/np)
         } if np > nf
         m.reply str
-      else
-        m.reply _("nobody has played %{truco} on %{chan} yet") % {
-          :truco => TrucoGame::TRUCO, :chan => m.channel
-        }
-      end
-    end
-
-    def do_pstats(m, p)
-      dnick = p[:nick] || m.source # display-nick, don't later case
-      nick = dnick.downcase
-      ps = chan_pstats(m.channel)[nick]
-      if ps.played == 0
-        m.reply _("%{nick} never played %{truco} here") % {
-          :truco => TrucoGame::TRUCO, :nick => dnick
-        }
-        return
-      end
-      np = ps.played
-      nf = ps.forfeits
-      nw = ps.won.length
-      score = ps.won.inject(0) { |sum, w| sum += w.score }
-      str = _("%{nick} played %{np} %{truco} games here, ") % {
-        :nick => dnick, :np => np, :truco => TrucoGame::TRUCO
+    else
+      m.reply _("nobody has played %{truco} on %{chan} yet") % {
+        :truco => TrucoGame::TRUCO, :chan => m.channel
       }
-      str << _("forfeited %{nf} games, ") % { :nf => nf } if nf > 0
-      str << _("won %{nw} games") % { :nw => nw}
-      if nw > 0
-        str << _(" with %{score} total points") % { :score => score }
-        avg = ps.won.inject(0) { |sum, w| sum += w.score/w.opponents }/nw
-        str << _(" and an average of %{avg} points per opponent") % { :avg => avg }
-      end
-      m.reply str
     end
-    
-    # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-    #
-    #
-    #
-    #
-    #  PLAYER MANAGEMENT
-    #
+  end
 
-    def replace_player(m, p)
-      unless @games.key?(m.channel)
-        m.reply _("There is no %{truco} game running here") % { :truco => TrucoGame::TRUCO }
-        return
-      end
-      @games[m.channel].replace_player(p[:old], p[:new])
+  def do_pstats(m, p)
+    dnick = p[:nick] || m.source # display-nick, don't later case
+    nick = dnick.downcase
+    ps = chan_pstats(m.channel)[nick]
+    if ps.played == 0
+      m.reply _("%{nick} never played %{truco} here") % {
+        :truco => TrucoGame::TRUCO, :nick => dnick
+      }
+      return
+    end
+    np = ps.played
+    nf = ps.forfeits
+    nw = ps.won.length
+    score = ps.won.inject(0) { |sum, w| sum += w.score }
+    str = _("%{nick} played %{np} %{truco} games here, ") % {
+      :nick => dnick, :np => np, :truco => TrucoGame::TRUCO
+    }
+    str << _("forfeited %{nf} games, ") % { :nf => nf } if nf > 0
+    str << _("won %{nw} games") % { :nw => nw}
+    if nw > 0
+      str << _(" with %{score} total points") % { :score => score }
+      avg = ps.won.inject(0) { |sum, w| sum += w.score/w.opponents }/nw
+      str << _(" and an average of %{avg} points per opponent") % { :avg => avg }
+    end
+    m.reply str
+  end
+  
+  # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+  #
+  #
+  #  PLAYER MANAGEMENT
+  #
+  def replace_player(m, p)
+    unless @games.key?(m.channel)
+      m.reply _("There is no %{truco} game running here") % { :truco => TrucoGame::TRUCO }
+      return
+    end
+    @games[m.channel].replace_player(p[:old], p[:new])
+  end
+
+  def drop_player(m, p)
+    unless @games.key?(m.channel)
+      m.reply _("There is no %{truco} game running here") % { :truco => TrucoGame::TRUCO }
+      return
+    end
+    @games[m.channel].drop_player(p[:nick] || m.source.nick)
+  end
+
+  def print_stock(m, p)
+    unless @games.key?(m.channel)
+      m.reply _("There is no %{truco} game running here") % { :truco => TrucoGame::TRUCO }
+      return
+    end
+    stock = @games[m.channel].stock
+    m.reply(_("%{num} cards in stock: %{stock}") % {
+      :num => stock.length,
+      :stock => stock.join(' ')
+      }, :split_at => /#{NormalText}\s*/)
+  end
+
+  def do_top(m, p)
+    pstats = chan_pstats(m.channel)
+    scores = []
+    wins = []
+    pstats.each do |k, v|
+      wins << [v.won.length, k]
+      scores << [v.won.inject(0) { |s, w| s+=w.score }, k]
     end
 
-    def drop_player(m, p)
-      unless @games.key?(m.channel)
-        m.reply _("There is no %{truco} game running here") % { :truco => TrucoGame::TRUCO }
-        return
-      end
-      @games[m.channel].drop_player(p[:nick] || m.source.nick)
-    end
-
-    def print_stock(m, p)
-      unless @games.key?(m.channel)
-        m.reply _("There is no %{truco} game running here") % { :truco => TrucoGame::TRUCO }
-        return
-      end
-      stock = @games[m.channel].stock
-      m.reply(_("%{num} cards in stock: %{stock}") % {
-        :num => stock.length,
-        :stock => stock.join(' ')
-        }, :split_at => /#{NormalText}\s*/)
-      end
-
-      def do_top(m, p)
-        pstats = chan_pstats(m.channel)
-        scores = []
-        wins = []
-        pstats.each do |k, v|
-          wins << [v.won.length, k]
-          scores << [v.won.inject(0) { |s, w| s+=w.score }, k]
-        end
-
-        if n = p[:scorenum]
-          msg = _("%{truco} %{num} highest scores: ") % {
-            :truco => TrucoGame::TRUCO, :num => p[:scorenum]
+    if n = p[:scorenum]
+      msg = _("%{truco} %{num} highest scores: ") % {
+        :truco => TrucoGame::TRUCO, :num => p[:scorenum]
+      }
+      scores.sort! { |a1, a2| -(a1.first <=> a2.first) }
+      scores = scores[0, n.to_i].compact
+      i = 0
+      if scores.length <= 5
+        list = "\n" + scores.map { |a|
+          i+=1
+          _("%{i}. %{b}%{nick}%{b} with %{b}%{score}%{b} points") % {
+            :i => i, :b => Bold, :nick => a.last, :score => a.first
           }
-          scores.sort! { |a1, a2| -(a1.first <=> a2.first) }
-          scores = scores[0, n.to_i].compact
-          i = 0
-          if scores.length <= 5
-            list = "\n" + scores.map { |a|
-              i+=1
-              _("%{i}. %{b}%{nick}%{b} with %{b}%{score}%{b} points") % {
-                :i => i, :b => Bold, :nick => a.last, :score => a.first
-              }
-              }.join("\n")
-            else
-              list = scores.map { |a|
-                i+=1
-                _("%{i}. %{nick} ( %{score} )") % {
-                  :i => i, :nick => a.last, :score => a.first
-                }
-                }.join(" | ")
-              end
-            elsif n = p[:winnum]
-              msg = _("%{truco} %{num} most wins: ") % {
-                :truco => TrucoGame::TRUCO, :num => p[:winnum]
-              }
-              wins.sort! { |a1, a2| -(a1.first <=> a2.first) }
-              wins = wins[0, n.to_i].compact
-              i = 0
-              if wins.length <= 5
-                list = "\n" + wins.map { |a|
-                  i+=1
-                  _("%{i}. %{b}%{nick}%{b} with %{b}%{score}%{b} wins") % {
-                    :i => i, :b => Bold, :nick => a.last, :score => a.first
-                  }
-                  }.join("\n")
-                else
-                  list = wins.map { |a|
-                    i+=1
-                    _("%{i}. %{nick} ( %{score} )") % {
-                      :i => i, :nick => a.last, :score => a.first
-                    }
-                    }.join(" | ")
-                  end
-                else
-                  msg = _("uh, what kind of score list did you want, again?")
-                  list = _(" I can only show the top scores (with top) and the most wins (with topwin)")
-                end
-                m.reply msg + list, :max_lines => (msg+list).count("\n")+1
-              end
+          }.join("\n")
+      else
+        list = scores.map { |a|
+          i+=1
+          _("%{i}. %{nick} ( %{score} )") % {
+            :i => i, :nick => a.last, :score => a.first
+          }
+          }.join(" | ")
+      end
+    elsif n = p[:winnum]
+      msg = _("%{truco} %{num} most wins: ") % {
+        :truco => TrucoGame::TRUCO, :num => p[:winnum]
+      }
+      wins.sort! { |a1, a2| -(a1.first <=> a2.first) }
+      wins = wins[0, n.to_i].compact
+      i = 0
+      if wins.length <= 5
+        list = "\n" + wins.map { |a|
+          i+=1
+          _("%{i}. %{b}%{nick}%{b} with %{b}%{score}%{b} wins") % {
+            :i => i, :b => Bold, :nick => a.last, :score => a.first
+          }
+          }.join("\n")
+      else
+        list = wins.map { |a|
+          i+=1
+          _("%{i}. %{nick} ( %{score} )") % {
+            :i => i, :nick => a.last, :score => a.first
+          }
+          }.join(" | ")
+        end
+    else
+      msg = _("uh, what kind of score list did you want, again?")
+      list = _(" I can only show the top scores (with top) and the most wins (with topwin)")
+    end
+    m.reply msg + list, :max_lines => (msg+list).count("\n")+1
+  end
+end
 
-
-            end
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-#
-#
-#
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #
 #  TRUCO < RBOT
-#
-            
+#            
 tp = TrucoPlugin.new
-
 tp.map 'truco', :private => false, :action => :create_game
 tp.map 'truco end', :private => false, :action => :end_game, :auth_path => 'manage'
 tp.map 'truco drop', :private => false, :action => :drop_player, :auth_path => 'manage::drop::self!'
@@ -1283,7 +1175,6 @@ tp.map 'truco chanstats', :private => false, :action => :do_chanstats
 tp.map 'truco stats [:nick]', :private => false, :action => :do_pstats
 tp.map 'truco top :scorenum', :private => false, :action => :do_top, :defaults => { :scorenum => 5 }
 tp.map 'truco topwin :winnum', :private => false, :action => :do_top, :defaults => { :winnum => 5 }
-
 tp.default_auth('stock', false)
 tp.default_auth('manage', false)
 tp.default_auth('manage::drop::self', true)
