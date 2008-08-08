@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: rbot 0.9.12-git"
 "POT-Creation-Date: 2008-07-07 18:02+0200"
-"PO-Revision-Date: 2008-08-03 22:25-0300"
+"PO-Revision-Date: 2008-08-08 13:48-0300\n"
 "Last-Translator:  Glauber Prado,<smade4@gmail.com>"
 "Language-Team: Portuguese"
 "MIME-Version: 1.0"
@@ -17,25 +17,25 @@ msgstr ""
 
 #: data/rbot/plugins/translator.rb:52
 msgid "Cannot translate empty string"
-msgstr ""
+msgstr "Não posso traduzir uma string vazia"
 
 #: data/rbot/plugins/translator.rb:262
 msgid "Number of seconds to wait for the translation service before timeout"
-msgstr ""
+msgstr "Número de segundos pra esperar antes que o serviço de tradução esgote o tempo"
 
 #: data/rbot/plugins/translator.rb:282
 msgid "Translator %{name} cannot be used: %{reason}"
-msgstr ""
+msgstr "Tradutor %{name} não pode ser usado: %{reason}"
 
 #: data/rbot/plugins/translator.rb:290
 msgid "List of translators to try in order when translator name not specified"
-msgstr ""
+msgstr "Lista de tradutores para tentar em ordem quando o nome do tradutor não for específicado"
 
 #: data/rbot/plugins/translator.rb:298
 msgid ""
 "%{translator} <from> <to> <phrase> => Look up phrase using %{info}, "
 "supported from -> to languages: %{directions}"
-msgstr ""
+msgstr "%{translator} <from> <to> <phrase> => Procurar por frase usando %{info}, linguagens suportadas from -> to: %{directions}"
 
 #: data/rbot/plugins/translator.rb:302
 msgid "%{source} -> %{targets}"
@@ -49,29 +49,36 @@ msgid ""
 "direction will be picked automatically. Use \"help <translator>\" to look up "
 "supported from and to languages"
 msgstr ""
+"Comando: <translator> <de> <para> <frase>, aonde <translator> é um dos:\n"
+"%{translators}. Se \\\"translator\\\" é usado no lugar do nome do tradutor, o\n"
+"primeiro tradutor em translator.default_list que suporta a direção específicada\n"
+"vai ser pega automaticamente. Use \\\"help <translator>\\\" para olhar as linguagens\n"
+"de e para suportadas"
 
 #: data/rbot/plugins/translator.rb:322
 msgid ""
 "None of the default translators (translator.default_list) supports "
 "translating from %{source} to %{target}"
 msgstr ""
+"Nenhum dos tradutores padrão (translator.default_list) suporta traduzir\n"
+"de %{source} para %{target}"
 
 #: data/rbot/plugins/translator.rb:337
 msgid "%{translation} (provided by %{translator})"
-msgstr ""
+msgstr "%{translation} (elaborada por %{translator}"
 
 #: data/rbot/plugins/translator.rb:344
 msgid "%{translator} doesn't support translating from %{source} to %{target}"
-msgstr ""
+msgstr "%{translator} não suporta traduzir de %{source} para %{target}"
 
 #: data/rbot/plugins/translator.rb:347
 msgid "%{translator} failed to provide a translation"
-msgstr ""
+msgstr "%{translator} falhou ao prover uma tradução"
 
 #: data/rbot/plugins/translator.rb:350
 msgid "The translator timed out"
-msgstr ""
+msgstr "O tradutor esgotou o tempo"
 
 #: data/rbot/plugins/translator.rb:353
 msgid "No translator called %{name}"
-msgstr ""
+msgstr "Não existe tradutor chamado %{name}"
